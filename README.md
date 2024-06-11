@@ -190,7 +190,7 @@ Or .variator():
         '''
 ```
 
-Variable types are provided for all methods of a class. Text documentation is given for __init__, .plot_curves(), .variator(), .lifespan() and .calculate_population(). For better understanding of how the class methods work, one can look in testing.ipynb.
+Variable types are provided for all methods of a class. Text documentation is given for ```__init__```, .plot_curves(), .variator(), .lifespan() and .calculate_population(). For better understanding of how the class methods work, one can look in testing.ipynb.
 
 ## Simulation with custom parameters
 
