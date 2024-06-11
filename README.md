@@ -34,7 +34,7 @@ We grant access to the two models featured in the article.
 
 ### Model 1 ('single equation')
 
-![scheme-01](https://github.com/Malaevleo/dynamical_system_somatic_mutations_2024/Model1.png)
+![scheme-01](Model1.png)
 
 This model features somatic cells population and populations of mutated and dead cells. It can be used in cases where there is a small amount of progenitor/stem cells and their impact can be neglected.
 
@@ -66,7 +66,7 @@ Code:
 ### Model 2 ('two equations')
 This model includes somatic and stem cells populations without accounting for the fact that mutated cells can also divide and make up their own population. 
 
-![scheme-02](https://github.com/Malaevleo/dynamical_system_somatic_mutations_2024/Model2.png)
+![scheme-02](Model2.png)
 
 This model can be applied to the liver and lungs and it should always be used in cases where organ has a lot of progenitor/stem cells and their impact can not be neglected. It can't be used with the spinal cord and if you try to do so the module will automatically change type of equation to Model 1.
 
