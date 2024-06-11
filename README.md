@@ -26,7 +26,7 @@ All of the parameters for organs described in the paper are located in the confi
         return configs.get(self.organ, configs['liver'])
 ```
 
-As the solving method we use RK45 because after a lot of experimentation we can conclude that it is the most stable one.
+As the solving method we use 'RK45' because after a lot of experimentation we can conclude that it is the most stable one.
 
 ## Choosing model
 
@@ -66,7 +66,7 @@ This model includes somatic and stem cells populations without accounting for th
 
 ![scheme-01](https://github.com/Malaevleo/dynamical_system_somatic_mutations_2024/assets/143445560/50f7099b-e087-4358-9dfe-2a4b8b7b806d)
 
-This model can be applied to the liver and lungs and it should always be used in cases where organ has a lot of progenitor/stem cells and their impact can not be neglected. It can't be used with the spinal cord and if you try to do so you will get the error message.
+This model can be applied to the liver and lungs and it should always be used in cases where organ has a lot of progenitor/stem cells and their impact can not be neglected. It can't be used with the spinal cord and if you try to do so the module will automatically change type of equation to Model 1.
 
 Dynamical system:
 
@@ -114,7 +114,7 @@ plot_thr - plots threshold after crossing which organ dies.
 
 proportions - presents values from the y axis be represented not as an amount of cells but as a percent of organ mass (values range from 0 to 1).
 
-population - which population of cells you want to observe. For model 1 you can use 'somatic', 'alive mutants' or 'dead mutants'. For model 2 'somatic' and 'stem'. Also, for model 2 you can print 'mortality function'. By default somatic cells are plotted.
+population - which population of cells you want to observe. For model 1 you can use 'somatic', 'alive mutants', 'dead mutants' or 'mortality function'. For model 2 'somatic', 'stem' and 'mortality function' too. By default somatic cells are plotted.
 
 ## Varitator
 
@@ -124,4 +124,67 @@ This function allows to observe how changes in different vairables affect overal
 z.variator(x_bound=300, d_max=0.9, d_min=0.1, fraction = 10, sampling_freq=10, z_min=0.5, z_max=0.9)
 ```
 
-By deafult only the $\alpha , \theta, z, \sigma$ are varied. If you want you can vary $r$ by using only_r = True option in the variator function.
+By deafult only the $\alpha , \theta, z, \sigma$ are varied for Model 1 and $\alpha$, $\sigma$, $\beta$ and $\epsilon$ for Model 2. If you want you can vary $r$ by using only_r = True option in the variator function.
+
+## Simulation with custom parameters
+
+You can also run the simulation with your own config defined. For these purpose you should follow these steps:
+
+- Initialize an object for simulation:
+
+```
+custom = Somatic_LS(organ = 'custom', end_time=300, equation='two')
+```
+
+The program will give you a reminder that you use your own parameters now:
+
+```
+This organ is not specified. Use your custom config, threshold and initial conditions to solve the system
+Fist you need calculate_population, then lifespan
+
+              CONFIG FOR SIMULATION HAS BEEN CREATED
+              ----------------------------------------
+              Final parameters set:
+              --organ: custom,
+              --start: 0.0 years,
+              --end: 300.0 years,
+              --type of system: two equation system,
+              --solver method: RK45,
+              --include mutants: False
+              ----------------------------------------
+              
+```
+
+- Solve a system with your own parameters:
+
+NB! When defining a set of parameters for your own system you need to remember that it should be a **list** object and the order should be the following: **[$\sigma$, $K$, $M$, $r$, $\epsilon$, $\alpha$, $\beta$, $\gamma$, $z$, $\theta$]**. At this version the module accepts parameters only in this order. If you use *Model 2* for simulations, you still need to set $z$ and $\theta$ values as parameters are given in the same manner to both types of models.
+
+Also, initial conditions are given the following way for Model 2: [$X_0$, $Y_0$, $\mu_0$] and for Model 1: [$X_0$, $C_0$, $F_0$, $\mu_0$,].
+
+Example:
+```
+conf = [2*0.087, 2*2e11, 2*2e11/94000, 2*4/407, 2*0.064, 2*(3.5e-9)*9.6e-3, 2*(1.83e-9)*9.6e-3, 2*4/407, 0.9, 0.239]
+
+custom_init = [0.6*conf[1], 0.6*conf[2], 0]
+
+custom_thr = 0.2
+
+custom_sol = custom.calculate_population(custom_conf=conf, custom_init=custom_init) # your custom solution
+
+```
+
+- Calculate lifespan:
+
+Example:
+```
+ls = custom.lifespan(custom_solution=custom_sol, custom_thr=custom_thr, custom_conf=conf)
+```
+
+- Now you can plot populations or launch .variator() method with your own set of parameters:
+
+Example:
+```
+custom.plot_curves(custom_conf=conf, custom_thr=custom_thr, custom_ls=ls, custom_sol=custom_sol) # somatic population plot
+
+custom.variator(custom_init=custom_init, custom_thr=custom_thr, custom_conf=conf) # variator
+```
