@@ -7,6 +7,8 @@
 
 ## First steps
 
+You can look on the module code in ```lifespan_class.py```. To work with it, one should import it in his notebook by ```from lifespan_class import *```.
+
 Visual style of plots is defined via the line
 
 ```
