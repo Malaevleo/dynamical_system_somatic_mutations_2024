@@ -128,6 +128,70 @@ z.variator(x_bound=300, d_max=0.9, d_min=0.1, fraction = 10, sampling_freq=10, z
 
 By deafult only the $\alpha , \theta, z, \sigma$ are varied for Model 1 and $\alpha$, $\sigma$, $\beta$ and $\epsilon$ for Model 2. If you want you can vary $r$ by using only_r = True option in the variator function.
 
+## Documentation
+
+For every function that is present in a module you can obtain an explicit documentation with types of all variables specified. 
+
+For example method .plot_curves():
+
+```
+def plot_curves(
+        self, 
+        population:str = 'somatic', 
+        view_all:bool = False, 
+        proportions:bool = True, 
+        plot_thr:bool = True,
+        custom_conf:List = None,
+        custom_thr:float = None,
+        custom_sol = None,
+        custom_ls:int = None) -> None:
+
+        '''
+            Plot results of simulation.
+
+            ######
+            Args: population - type of population, view_all - show only till the moment of death or not, proportions - plot as population/(population limit), plot_thr - plot cutoff value, custom_sol - your solve_ivp object, custom_ls - your lifespan result
+
+            ######
+            Output: matplotlib.pyplot plots, lifespan
+        '''
+```
+Or .variator():
+
+```
+    def variator(
+        self, 
+        fraction:float = 5, 
+        sampling_freq:int = 4, 
+        x_bound:float = 300, 
+        only_z:bool=False, 
+        only_r:bool=False, 
+        only_sigma:bool=False, 
+        only_alpha:bool=False, 
+        z_min:float=0.1, 
+        z_max:float=0.9,
+        d_min:float=0.1,
+        d_max:float=0.9, 
+        legend:bool=True,
+        custom_conf:List = None,
+        custom_thr:float = None,
+        custom_init:List = None) -> None:
+
+        '''
+            Perturb the parameters of a system to see the results.
+
+            ######
+            Args: fraction for interval as {parameter/fraction; parameter*fraction}, sampling_freq - amount of equidistant points to separate the interval, 
+            x_bound = cut the plot on this value of time, only_* - variate only * parameter, {z_min; z_max} and {d_min;d_max} - bounds for proportion of alive mutants and their death rate,
+            legend - show legend on plot or not, custom_* - define your own parameters and solution for a variator.
+
+            ######
+            Output: plots and lifespans
+        '''
+```
+
+Variable types are provided for all methods of a class. Text documentation is given for __init__, .plot_curves(), .variator(), .lifespan() and .calculate_population(). For better understanding of how the class methods work, one can look in testing.ipynb.
+
 ## Simulation with custom parameters
 
 You can also run the simulation with your own config defined. For these purpose you should follow these steps:
@@ -159,7 +223,7 @@ Fist you need calculate_population, then lifespan
 
 - Solve a system with your own parameters:
 
-NB! When defining a set of parameters for your own system you need to remember that it should be a **list** object and the order should be the following: **[$\sigma$, $K$, $M$, $r$, $\epsilon$, $\alpha$, $\beta$, $\gamma$, $z$, $\theta$]**. At this version the module accepts parameters only in this order. If you use *Model 2* for simulations, you still need to set $z$ and $\theta$ values as parameters are given in the same manner to both types of models.
+NB! When defining a set of parameters for your own system you need to remember that it should be a **list** object and the order should be the following: **[ $\sigma$ , $K$, $M$, $r$, $\epsilon$, $\alpha$, $\beta$, $\gamma$, $z$, $\theta$]**. At this version the module accepts parameters only in this order. If you use *Model 2* for simulations, you still need to set $z$ and $\theta$ values as parameters are given in the same manner to both types of models.
 
 Also, initial conditions are given the following way for Model 2: [$X_0$, $Y_0$, $\mu_0$] and for Model 1: [$X_0$, $C_0$, $F_0$, $\mu_0$,].
 
