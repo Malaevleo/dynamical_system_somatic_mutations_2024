@@ -275,7 +275,7 @@ ValueError: Please specify your parameters, initial conditions and threshold val
 
 NB! When defining a set of parameters for your own system you need to remember that it should be a **list** object and the order should be the following: **[ $\sigma$ , $K$, $M$, $r$, $\epsilon$, $\alpha$, $\beta$, $\gamma$, $z$, $\theta$]**. At this version the module accepts parameters only in this order. If you use *Model 2* for simulations, you still need to set $z$ and $\theta$ values as parameters are given in the same manner to both types of models.
 
-Also, initial conditions are given the following way for Model 2: [$X_0$, $Y_0$, $\mu_0$] and for Model 1: [$X_0$, $C_0$, $F_0$, $\mu_0$,].
+Also, initial conditions are given the following way for Model 2: [X_0, Y_0, $\mu_0$] and for Model 1: [X_0, $C_0$, $F_0$, $\mu_0$,].
 
 After setting your parameters and conditions for solving a system you can simply call all the necessary functions as class methods without specifying custom params anymore:
 
