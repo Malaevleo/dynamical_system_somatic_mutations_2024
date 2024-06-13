@@ -9,11 +9,53 @@
 
 You can look on the module code in ```lifespan_class.py```. To work with it, one should import it in his notebook by ```from lifespan_class import *```.
 
-Visual style of plots is defined via the line
+The ```__init__``` function has a following set of arguments:
+```
+class Somatic_LS(object):
+    def __init__(
+        self, 
+        organ:str='liver', 
+        method:str='RK45', 
+        start_time:float=0, 
+        end_time:float=300, 
+        include_mutants:bool=False, 
+        equation:str='single',
+        print_config:bool=True,
+        custom_conf:List = None,
+        custom_thr:float = None,
+        custom_init:List = None,
+        style:str = 'bmh',
+        print_methods:bool = False,
+        print_styles:bool = False):
+```
+
+You can see that all the parameters have their default value.
+
+To start a session you should specify a variable and connect it with class.
+
+Example:
 
 ```
-plt.style.use("bmh")
+spinal_conf_ = Somatic_LS(organ = 'spinal cord', end_time=1500, include_mutants=False, method='RK45')
 ```
+
+As all the parameters have default values you can launch it like this:
+
+```
+organ = Somatic_LS()
+```
+This will result in a simulation of liver with Model 1 and without alive mutants.
+
+Next you can call any method that you want and get a desired result:
+
+Example:
+```
+organ.plot_curves(population = 'somatic')
+```
+
+Visual style of plots is defined by default as 'bmh', but you can always change it by initializing ```style``` argument in class. 
+
+You can also look on the available methods for solving a system by setting ```print_methods``` to True.
 
 All of the parameters for organs described in the paper are located in the config which is defined using the function below
 
@@ -142,17 +184,14 @@ def plot_curves(
         population:str = 'somatic', 
         view_all:bool = False, 
         proportions:bool = True, 
-        plot_thr:bool = True,
-        custom_conf:List = None,
-        custom_thr:float = None,
-        custom_sol = None,
-        custom_ls:int = None) -> None:
+        plot_thr:bool = True) -> None:
 
         '''
-            Plot results of simulation.
+            ####Plot results of simulation.
 
             ######
-            Args: population - type of population, view_all - show only till the moment of death or not, proportions - plot as population/(population limit), plot_thr - plot cutoff value, custom_sol - your solve_ivp object, custom_ls - your lifespan result
+            Args: population - type of population, view_all - show only till the moment of death or not, 
+            proportions - plot as population/(population limit), plot_thr - plot cutoff value
 
             ######
             Output: matplotlib.pyplot plots, lifespan
@@ -161,7 +200,7 @@ def plot_curves(
 Or .variator():
 
 ```
-    def variator(
+def variator(
         self, 
         fraction:float = 5, 
         sampling_freq:int = 4, 
@@ -170,22 +209,21 @@ Or .variator():
         only_r:bool=False, 
         only_sigma:bool=False, 
         only_alpha:bool=False, 
+        only_d:bool=False,
         z_min:float=0.1, 
         z_max:float=0.9,
         d_min:float=0.1,
         d_max:float=0.9, 
         legend:bool=True,
-        custom_conf:List = None,
-        custom_thr:float = None,
-        custom_init:List = None) -> None:
+        proportions:bool=True) -> None:
 
         '''
-            Perturb the parameters of a system to see the results.
+            ####Perturb the parameters of a system to see the results.
 
             ######
             Args: fraction for interval as {parameter/fraction; parameter*fraction}, sampling_freq - amount of equidistant points to separate the interval, 
             x_bound = cut the plot on this value of time, only_* - variate only * parameter, {z_min; z_max} and {d_min;d_max} - bounds for proportion of alive mutants and their death rate,
-            legend - show legend on plot or not, custom_* - define your own parameters and solution for a variator.
+            legend - show legend on plot or not, proportions - whether on not to plot population as a fraction of K.
 
             ######
             Output: plots and lifespans
@@ -196,19 +234,25 @@ Variable types are provided for all methods of a class. Text documentation is gi
 
 ## Simulation with custom parameters
 
-You can also run the simulation with your own config defined. For these purpose you should follow these steps:
+You can also run the simulation with your own config defined. Given a name of an organ that is not specified inside ```__init__``` will result in simulation with custom set of parameters. 
 
-- Initialize an object for simulation:
+You should specify your config, initial conditions and cutoff value inside a class. 
+
+Example:
 
 ```
-custom = Somatic_LS(organ = 'custom', end_time=300, equation='two')
+conf = [2*0.087, 2*2e11, 2*2e11/94000, 2*4/407, 2*0.064, 2*(3.5e-9)*9.6e-3, 2*(1.83e-9)*9.6e-3, 2*4/407, 0.9, 0.239]
+custom_init_two = [0.6*conf[1], 0.6*conf[2], 0]
+custom_init_single = [0.6*conf[1], 0, 0, 0]
+custom_thr = 0.2
+
+custom = Somatic_LS(organ='custom', equation='single',include_mutants=True, custom_conf=conf, custom_init=custom_init_single, custom_thr=custom_thr)
 ```
 
 The program will give you a reminder that you use your own parameters now:
 
 ```
 This organ is not specified. Use your custom config, threshold and initial conditions to solve the system
-Fist you need calculate_population, then lifespan
 
               CONFIG FOR SIMULATION HAS BEEN CREATED
               ----------------------------------------
@@ -216,43 +260,29 @@ Fist you need calculate_population, then lifespan
               --organ: custom,
               --start: 0.0 years,
               --end: 300.0 years,
-              --type of system: two equation system,
+              --type of system: single equation system,
               --solver method: RK45,
-              --include mutants: False
+              --include mutants: True
               ----------------------------------------
-              
+                            
 ```
 
-- Solve a system with your own parameters:
+Note that the program will exit with an error if you'll specify a custom organ without parameters:
+```
+
+ValueError: Please specify your parameters, initial conditions and threshold value when using not built-in organs.
+```
 
 NB! When defining a set of parameters for your own system you need to remember that it should be a **list** object and the order should be the following: **[ $\sigma$ , $K$, $M$, $r$, $\epsilon$, $\alpha$, $\beta$, $\gamma$, $z$, $\theta$]**. At this version the module accepts parameters only in this order. If you use *Model 2* for simulations, you still need to set $z$ and $\theta$ values as parameters are given in the same manner to both types of models.
 
 Also, initial conditions are given the following way for Model 2: [$X_0$, $Y_0$, $\mu_0$] and for Model 1: [$X_0$, $C_0$, $F_0$, $\mu_0$,].
 
-Example:
-```
-conf = [2*0.087, 2*2e11, 2*2e11/94000, 2*4/407, 2*0.064, 2*(3.5e-9)*9.6e-3, 2*(1.83e-9)*9.6e-3, 2*4/407, 0.9, 0.239]
-
-custom_init = [0.6*conf[1], 0.6*conf[2], 0]
-
-custom_thr = 0.2
-
-custom_sol = custom.calculate_population(custom_conf=conf, custom_init=custom_init) # your custom solution
+After setting your parameters and conditions for solving a system you can simply call all the necessary functions as class methods without specifying custom params anymore:
 
 ```
-
-- Calculate lifespan:
-
-Example:
+custom.plot_curves()
 ```
-ls = custom.lifespan(custom_solution=custom_sol, custom_thr=custom_thr, custom_conf=conf)
+or
 ```
-
-- Now you can plot populations or launch .variator() method with your own set of parameters:
-
-Example:
-```
-custom.plot_curves(custom_conf=conf, custom_thr=custom_thr, custom_ls=ls, custom_sol=custom_sol) # somatic population plot
-
-custom.variator(custom_init=custom_init, custom_thr=custom_thr, custom_conf=conf) # variator
+custom.variator()
 ```
