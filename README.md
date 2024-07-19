@@ -21,12 +21,12 @@ class Somatic_LS(object):
         include_mutants:bool=False, 
         equation:str='single',
         print_config:bool=True,
-        custom_conf:List = None,
-        custom_thr:float = None,
-        custom_init:List = None,
-        style:str = 'bmh',
-        print_methods:bool = False,
-        print_styles:bool = False):
+        custom_conf:List=None,
+        custom_thr:float=None,
+        custom_init:List=None,
+        style:str='bmh',
+        print_methods:bool=False,
+        print_styles:bool=False):
 ```
 
 You can see that all the parameters have their default value.
@@ -142,7 +142,7 @@ Define which organ you want to assess, which model to use, limit the maximum tim
 Example:
 
 ```
-z = Somatic_LS(organ = 'lungs',equation = 'single', end_time = 300, include_mutants=True)
+z = Somatic_LS(organ='lungs',equation='single', end_time=300, include_mutants=True)
 ```
 
 Equation we use in this example is 'single' which correspond to the Model 1. To use Model 2 write equation = 'two'.
@@ -150,7 +150,7 @@ Equation we use in this example is 'single' which correspond to the Model 1. To 
 To obtain the lifespan value and plot the somatic cells population this code is used:
 
 ```
-z.plot_curves(view_all = True, plot_thr = True)
+z.plot_curves(view_all=True, plot_thr=True)
 ```
 There are multiple options in the plot_curves function:
 
@@ -167,7 +167,7 @@ population - which population of cells you want to observe. For model 1 you can 
 This function allows to observe how changes in different vairables affect overall lifespan of the chosen organ.
 
 ```
-z.variator(x_bound=300, d_max=0.9, d_min=0.1, fraction = 10, sampling_freq=10, z_min=0.5, z_max=0.9)
+z.variator(x_bound=300, d_max=0.9, d_min=0.1, fraction=10, sampling_freq=10, z_min=0.5, z_max=0.9)
 ```
 
 By deafult only the $\alpha , \theta, z, \sigma$ are varied for Model 1 and $\alpha$, $\sigma$, $\beta$ and $\epsilon$ for Model 2. If you want you can vary $r$ by using only_r = True option in the variator function.
@@ -181,10 +181,10 @@ For example method .plot_curves():
 ```
 def plot_curves(
         self, 
-        population:str = 'somatic', 
-        view_all:bool = False, 
-        proportions:bool = True, 
-        plot_thr:bool = True) -> None:
+        population:str='somatic', 
+        view_all:bool=False, 
+        proportions:bool=True, 
+        plot_thr:bool=True) -> None:
 
         '''
             ####Plot results of simulation.
@@ -202,9 +202,9 @@ Or .variator():
 ```
 def variator(
         self, 
-        fraction:float = 5, 
-        sampling_freq:int = 4, 
-        x_bound:float = 300, 
+        fraction:float=5, 
+        sampling_freq:int=4, 
+        x_bound:float=300, 
         only_z:bool=False, 
         only_r:bool=False, 
         only_sigma:bool=False, 
