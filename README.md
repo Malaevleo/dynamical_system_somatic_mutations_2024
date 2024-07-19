@@ -7,7 +7,7 @@
 
 ## First steps
 
-You can look on the module code in ```lifespan_class.py```. To work with it, one should import it in his notebook by ```from lifespan_class import *```.
+You can look on the module code in ```lifespan_class.py```. To work with it, one should import it in his notebook by ```from lifespan_class import Somatic_LS```.
 
 The ```__init__``` function has a following set of arguments:
 ```
