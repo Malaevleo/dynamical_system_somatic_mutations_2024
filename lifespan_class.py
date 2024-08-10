@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import matplotlib.style
+import scipy.integrate
 from scipy.integrate import solve_ivp
 from scipy.signal import savgol_filter
 import pandas as pd
@@ -28,7 +29,7 @@ class Somatic_LS(object):
             ######
             Args: organ for simulation, method for solve_ivp, 
             start and end times in years, include alive mutants in Model 1 system or not, 
-            type of system, whether or not to print config, custom_* - specify your custom parameters for a system.
+            type of system, whether or not to print config, custom_conf - specify your custom parameters for a system.
 
             ######
             Output: populations, plots and variations.
@@ -65,8 +66,10 @@ class Somatic_LS(object):
         self.end = int(np.round(end_time / self.coeff))
         self.span = -self.start + self.end
         self.t = np.linspace(self.start, self.end, self.end - self.start)
+
         self.include = include_mutants
         self.equation = equation
+
         self.init = self.get_initial_conditions()
         self.threshold = self.get_threshold()
         self.model = self.get_model()
@@ -121,12 +124,12 @@ class Somatic_LS(object):
                     raise ValueError('There shouldn\'t be NaNs')
         return val
     
-    def custom_params(self, uploaded=None) -> Tuple[dict,...]:
+    def custom_params(self, uploaded=None) -> Tuple[dict, dict, dict]:
         '''
         Upload your own parameters, threshold and initial conditions of a model
 
         ######
-        Args: uploaded - either a path to a .csv, .xlsx or .json file or a python dictionary
+        Args: uploaded - either a path to a .csv, .xlsx or .json file or a python dictionary, pandas dataframe
 
         ######
         Output: your parameters, initial conditions and threshold
@@ -166,10 +169,18 @@ class Somatic_LS(object):
     
     def set_config(self) -> dict:
         configs = {
-            'liver': {'sigma':0.087, 'K':2e11, 'M':2e11/94000, 'r':4/407, 'eps':0.064, 'alpha':(3.5e-9)*9.6e-3, 'beta':(1.83e-9)*9.6e-3, 'g':4/407, 'z':0.9, 'theta':0.239},
-            'mouse liver': {'sigma':0.087, 'K':3.37e8, 'M':3.37e8/94000, 'r':63/407, 'eps':0.064, 'alpha':35*(3.5e-9), 'beta':35*(1.83e-9), 'g':63/407, 'z':0.9, 'theta':0.239},
-            'lungs': {'sigma':0.073, 'K':10.5e9, 'M':0.07*10.5e9, 'r':0.001/407, 'eps':0.007, 'alpha':6.392476819356688e-12, 'beta':6.392476819356688e-12 / 1.9126, 'g':0.001/407, 'z':0.9, 'theta':0.239},
-            'spinal cord': {'sigma':0.085, 'K':222e6, 'M':0, 'r':0, 'eps':0, 'alpha':0.9047619*(3.5e-9)*0.0013563, 'beta':0, 'g':0, 'z':0.9, 'theta':0.239}
+            'liver': {
+                'sigma':0.087, 'K':2e11, 'M':2e11/94000, 'r':4/407, 'eps':0.064, 'alpha':(3.5e-9)*9.6e-3, 'beta':(1.83e-9)*9.6e-3, 'g':4/407, 'z':0.9, 'theta':0.239
+                },
+            'mouse liver': {
+                'sigma':0.087, 'K':3.37e8, 'M':3.37e8/94000, 'r':63/407, 'eps':0.064, 'alpha':35*(3.5e-9), 'beta':35*(1.83e-9), 'g':63/407, 'z':0.9, 'theta':0.239
+                },
+            'lungs': {
+                'sigma':0.073, 'K':10.5e9, 'M':0.07*10.5e9, 'r':0.001/407, 'eps':0.007, 'alpha':6.392476819356688e-12, 'beta':6.392476819356688e-12 / 1.9126, 'g':0.001/407, 'z':0.9, 'theta':0.239
+                },
+            'spinal cord': {
+                'sigma':0.085, 'K':222e6, 'M':0, 'r':0, 'eps':0, 'alpha':0.9047619*(3.5e-9)*0.0013563, 'beta':0, 'g':0, 'z':0.9, 'theta':0.239
+                }
         }
         return configs.get(self.organ, configs['liver'])
     
@@ -193,35 +204,50 @@ class Somatic_LS(object):
     def _model_one(self, t, y, s, K, M, r, e, a, b, g, z, d) -> list:
         X, C, F, m = y
         m1 = 0.5 * s * (1 - X / K)
-        dXdt = r * X * (1 - X / (K)) - a * X - m1 * (r * C * (1 - C / (K)) + a * X) ** 2 * t ** 2
-        dCdt = r * C * (1 - C / (K)) + z * a * X - d * C
+        dXdt = r * X * (1 - X / K) - a * X - m1 * (r * C * (1 - C / K) + a * X) ** 2 * t ** 2
+        dCdt = r * C * (1 - C / K) + z * a * X - d * C
         dFdt = (1 - z) * a * X + d * C
-        dmdt = m1 * (r * C * (1 - C / (K)) + a*X) ** 2 * t ** 2
+        dmdt = m1 * (r * C * (1 - C / K) + a * X) ** 2 * t ** 2
         return [dXdt, dCdt, dFdt, dmdt]
 
     def _model_two(self, t, y, s, K, M, r, e, a, b, g, z, d) -> list:
         X, Y, m = y
-        m1 = 0.5 * s * (1 - (X + Y)/(K + M))
-        dXdt = (r * X + 2 * e * Y * self._sigmoid(Y/M)) * (1 - X / K) - a * X - m1 * (a * X + b * Y) ** 2 * t ** 2
-        dYdt = g * Y * (1 - Y / M) - e * Y * self._sigmoid(Y/M) - b * Y
+        m1 = 0.5 * s * (1 - (X + Y) / (K + M))
+        dXdt = (r * X + 2 * e * Y * self._sigmoid(Y / M)) * (1 - X / K) - a * X - m1 * (a * X + b * Y) ** 2 * t ** 2
+        dYdt = g * Y * (1 - Y / M) - e * Y * self._sigmoid(Y / M) - b * Y
         dmdt = m1 * (a * X + b * Y) ** 2 * t ** 2
         return [dXdt, dYdt, dmdt]
     
     def get_initial_conditions(self) -> dict:
         K = self.conf_['K']
         M = self.conf_['M']
+
         if self.equation == 'one':
             initial = {
-                'liver': {'K': K, 'C':0, 'F':0, 'm':0},
-                'lungs': {'K':K, 'C':0, 'F':0, 'm':0},
-                'spinal cord': {'K':K, 'C':0, 'F':0, 'm':0},
-                'mouse liver': {'K':K, 'C':0, 'F':0, 'm':0}
+                'liver': {
+                    'K': K, 'C':0, 'F':0, 'm':0
+                    },
+                'lungs': {
+                    'K':K, 'C':0, 'F':0, 'm':0
+                    },
+                'spinal cord': {
+                    'K':K, 'C':0, 'F':0, 'm':0
+                    },
+                'mouse liver': {
+                    'K':K, 'C':0, 'F':0, 'm':0
+                    }
             }
         elif self.equation == 'two':
             initial = {
-                'liver': {'K':K, 'M':M, 'm':0},
-                'lungs': {'K':K, 'M':M, 'm':0},
-                'mouse liver': {'K':K, 'M':M, 'm':0}
+                'liver': {
+                    'K':K, 'M':M, 'm':0
+                    },
+                'lungs': {
+                    'K':K, 'M':M, 'm':0
+                    },
+                'mouse liver': {
+                    'K':K, 'M':M, 'm':0
+                    }
             }
 
         return initial.get(self.organ, initial['liver'])
@@ -232,12 +258,12 @@ class Somatic_LS(object):
         elif self.equation == 'two':
             return self._model_two
     
-    def calculate_population(self):
+    def calculate_population(self) -> scipy.integrate._ivp.ivp.OdeResult:
         '''
             Calculate populations by solving differential equation system numerically.
 
             ######
-            Args: self
+            Args: class attributes
 
             ######
             Output: solve_ivp object with calculated cell populations
@@ -249,7 +275,18 @@ class Somatic_LS(object):
             conf = tuple(self.custom_conf.values())
             initial = self.custom_init
         model = self.model
-        solution = solve_ivp(model,t_span=(self.start, self.end), y0=list(initial.values()), t_eval=self.t, method = self.method,args=conf, dense_output=False, atol = 1e-6, rtol = 1e-6)
+
+        solution = solve_ivp(
+            model,
+            t_span=(self.start, self.end), 
+            y0=list(initial.values()), 
+            t_eval=self.t, 
+            method = self.method,
+            args=conf, 
+            dense_output=False, 
+            atol = 1e-6, 
+            rtol = 1e-6)
+        
         return solution  
     
     def get_threshold(self) -> float:
@@ -263,7 +300,7 @@ class Somatic_LS(object):
 
     def lifespan(
         self, 
-        custom_solution=None) -> int:
+        custom_solution:scipy.integrate._ivp.ivp.OdeResult=None) -> int:
 
         '''
             Calculate a lifespan of somatic population given a cutoff value.
@@ -383,7 +420,7 @@ class Somatic_LS(object):
                 self._plot_mortality_phase(arr, K, proportions, derivative, logder)
                 return None
             elif population == 'Stable points':
-                raise ValueError('There are no analytic solutions of this system -> there are no stable points')
+                raise NameError('There are no analytic solutions of this system -> there are no stable points')
         
         if proportions:
             if population == 'Somatic':
@@ -409,7 +446,7 @@ class Somatic_LS(object):
         plt.legend()
         plt.show()
     
-    def _plot_mortality(self, arr, life, derivative, logder) -> None:
+    def _plot_mortality(self, arr:scipy.integrate._ivp.ivp.OdeResult, life, derivative:bool, logder:bool) -> None:
         if self.equation == 'one':
             Y = arr.y[3]
         else:
@@ -433,7 +470,7 @@ class Somatic_LS(object):
             max_der_ = np.argmax(der)
             _, axes = plt.subplots(1, 2, figsize = (12,8))
 
-            axes[0].plot(self.t[:-2]*self.coeff, deriv[:-1])
+            axes[0].plot(self.t[:-2]*self.coeff, deriv[:-2])
             if not logder:
                 axes[1].plot(self.t[:-2]*self.coeff, der)
             else:
@@ -462,7 +499,7 @@ class Somatic_LS(object):
         if type(life)==int:
             print('Ratio of max to total lifespan in %:', np.round((maximum * self.coeff * 100)/(life * self.coeff), 1))
 
-    def _plot_mortality_phase(self, arr, K, proportions, derivative, logder) -> None:
+    def _plot_mortality_phase(self, arr:scipy.integrate._ivp.ivp.OdeResult, K:float, proportions:bool, derivative:bool, logder:bool) -> None:
         if self.equation == 'one':
             Y = arr.y[3]
         else:
@@ -510,7 +547,7 @@ class Somatic_LS(object):
 
             _, ax = plt.subplots(1, 2, figsize = (12,8))
 
-            ax[0].plot(x_, deriv[:-1])
+            ax[0].plot(x_, deriv[:-2])
             if not logder:
                 ax[1].plot(x_, der)
             else:
@@ -543,9 +580,9 @@ class Somatic_LS(object):
         print('-'*50)
         print('Population value for mortality function maximum (proportional to K):', np.round(x[max_]/K, 2))
     
-    def _plot_stable_points(self, root, proportions, plot_thr) -> None:
+    def _plot_stable_points(self, root:int, proportions:bool, plot_thr:bool) -> None:
         if self.include:
-            raise ValueError('There is no analytical solution for this system -> there are no stable points')
+            raise ValueError('There is no analytical solution for this equation -> there are no stable points')
         t = self.t
         res = np.zeros(len(t))
         b, K, _, r, _, a, _, _, _, _ = tuple(self.conf_.values()) if not self.custom else tuple(self.custom_conf.values())
@@ -558,7 +595,7 @@ class Somatic_LS(object):
         
         if proportions:
             res = res/K
-            res_ = self.pop.y[0]/K
+            res_ = self.calculate_population().y[0]/K
             label = 'Population/K'
         else:
             thr = thr*K
@@ -628,7 +665,23 @@ class Somatic_LS(object):
         else:
             self._variator(fraction, sampling_freq, model, config_, init, x_bound, legend, thr, z_min, z_max, d_min, d_max, K, proportions)   
 
-    def _variator(self, fraction, sampling_freq, model, config, init, x_bound, legend, thr, z_min, z_max, d_min, d_max, K, proportion):
+    def _variator(
+            self, 
+            fraction:float, 
+            sampling_freq:int, 
+            model, 
+            config:dict, 
+            init:dict, 
+            x_bound:float, 
+            legend:bool, 
+            thr:float, 
+            z_min:float, 
+            z_max:float, 
+            d_min:float, 
+            d_max:float, 
+            K:float, 
+            proportion:bool) -> None:
+        
         if (self.equation == 'one')&(self.include == False):
             param_ind = ['sigma','alpha','r']
             sols = [[], [], []]
@@ -636,9 +689,11 @@ class Somatic_LS(object):
         else:
             param_ind = ['sigma', 'alpha', 'beta', 'eps'] if self.equation=='two' else ['sigma','alpha','z','theta']
             sols = [[], [], [], []]
+
         mantissa = {'sigma':4, 'alpha':13, 'beta':13, 'eps':3, 'theta':2, 'z':2, 'r': 4}
         names = {'sigma': 'sigma', 'alpha': 'alpha', 'beta': 'beta', 'eps': 'epsilon', 'theta':'alive mutants death rate', 'z':'proportion of alive mutants', 'r': 'somatic cells recovery rate'}
         ranges = []
+
         for i in param_ind:
             if i == 'theta':
                 ranges.append(np.linspace(d_min, d_max, sampling_freq))
@@ -646,20 +701,39 @@ class Somatic_LS(object):
                 ranges.append(np.linspace(z_min, z_max, sampling_freq))
             else:
                 ranges.append(np.linspace(config[i]/fraction, config[i]*fraction, sampling_freq))
+
         for n in range(len(sols)):
             for param_value in ranges[n]:
                 conf_ = config.copy()
                 conf_[param_ind[n]] = param_value
-                sol = solve_ivp(model, t_span = (self.start, self.end), y0 = list(init.values()), t_eval = self.t, method = self.method, args = tuple(conf_.values()), dense_output=False, atol=1e-6, rtol=1e-6)
+
+                sol = solve_ivp(
+                    model, 
+                    t_span = (self.start, self.end), 
+                    y0 = list(init.values()), 
+                    t_eval = self.t, 
+                    method = self.method, 
+                    args = tuple(conf_.values()), 
+                    dense_output=False, 
+                    atol=1e-6, 
+                    rtol=1e-6)
+                
                 sols[n].append(sol)
+
         if (self.equation == 'one')&(self.include == False):
             _, axs = plt.subplots(1, 3, figsize = (25, 8))
         else:
             _, axs = plt.subplots(2,2, figsize = (20,14))
         axs = axs.flatten()
+
         for i in range(len(axs)):
             for j in range(len(sols[i])):
-                axs[i].plot(self.t*self.coeff, sols[i][j].y[0] if not proportion else sols[i][j].y[0]/K, label = f'Somatic population for {names[param_ind[i]]} = {np.round(ranges[i][j], mantissa[param_ind[i]])}')
+
+                axs[i].plot(
+                    self.t*self.coeff, sols[i][j].y[0] if not proportion else sols[i][j].y[0]/K, 
+                    label = f'Somatic population for {names[param_ind[i]]} = {np.round(ranges[i][j], 
+                    mantissa[param_ind[i]])}')
+                
             axs[i].grid('True')
             axs[i].set_xlabel('Years')
             axs[i].set_ylabel('Population')
@@ -672,7 +746,21 @@ class Somatic_LS(object):
             if legend:
                 axs[i].legend(loc = 'upper right')
 
-    def _vary_parameter(self, param_name, fraction, sampling_freq, model, initial_conditions, threshold, x_bound, legend, config, K, proportion, minimum=None, maximum=None):
+    def _vary_parameter(
+            self, 
+            param_name:str, 
+            fraction:float, 
+            sampling_freq:int, 
+            model, 
+            initial_conditions:dict, 
+            threshold:float, 
+            x_bound:float, 
+            legend:bool, 
+            config, K:float, 
+            proportion:bool, 
+            minimum:float=None, 
+            maximum:float=None) -> None:
+        
         if (minimum != None)&(maximum != None):
             param_range = np.linspace(minimum, maximum, sampling_freq)
         else:
@@ -682,7 +770,18 @@ class Somatic_LS(object):
         for param_value in param_range:
             conf = config.copy()
             conf[param_name] = param_value
-            solution = solve_ivp(model, t_span=(self.start, self.end), y0=list(initial_conditions.values()), t_eval=self.t, method=self.method, args=tuple(conf.values()), dense_output=False, atol=1e-6, rtol=1e-6)
+
+            solution = solve_ivp(
+                model, 
+                t_span=(self.start, self.end), 
+                y0=list(initial_conditions.values()), 
+                t_eval=self.t, 
+                method=self.method, 
+                args=tuple(conf.values()), 
+                dense_output=False, 
+                atol=1e-6, 
+                rtol=1e-6)
+            
             solutions.append(solution)
 
         print('Lower bound result:')
@@ -693,7 +792,21 @@ class Somatic_LS(object):
 
         self._plot_variation(solutions, param_range, param_name, threshold, x_bound, legend, K, proportion)
     
-    def _vary_z_parameter(self, z_min, z_max, steps, model, initial_conditions, threshold, x_bound, legend, config, only_d, K, proportion):
+    def _vary_z_parameter(
+            self, 
+            z_min:float, 
+            z_max:float, 
+            steps:int, 
+            model, 
+            initial_conditions:dict, 
+            threshold:float, 
+            x_bound:float, 
+            legend:bool, 
+            config:dict, 
+            only_d:bool, 
+            K:float, 
+            proportion:bool) -> None:
+        
         if self.equation == 'two':
             raise ValueError('No alive mutants in two equation model. Consider using Model 1 equation.')
         
@@ -708,7 +821,18 @@ class Somatic_LS(object):
                 conf['z'] = z_value
             else:
                 conf['theta'] = z_value
-            solution = solve_ivp(model, t_span=(self.start, self.end), y0=list(initial_conditions.values()), t_eval=self.t, method=self.method, args=tuple(conf.values()), dense_output=False, atol=1e-6, rtol=1e-6)
+
+            solution = solve_ivp(
+                model, 
+                t_span=(self.start, self.end), 
+                y0=list(initial_conditions.values()), 
+                t_eval=self.t, 
+                method=self.method, 
+                args=tuple(conf.values()), 
+                dense_output=False, 
+                atol=1e-6, 
+                rtol=1e-6)
+            
             solutions.append(solution)
 
         print('Lower bound result:')
@@ -718,7 +842,7 @@ class Somatic_LS(object):
         ls = self.lifespan(custom_solution=solutions[-1])
         self._plot_variation(solutions, z_range, param_name, threshold, x_bound, legend, K, proportion)
     
-    def _plot_variation(self, solutions, param_range, param_name, threshold, x_bound, legend, K, proportion):
+    def _plot_variation(self, solutions:list, param_range:np.ndarray, param_name:str, threshold:float, x_bound:float, legend:bool, K:float, proportion:bool) -> None:
         fig, ax = plt.subplots(figsize=(12, 8))
 
         for solution, param_value in zip(solutions, param_range):
@@ -726,7 +850,7 @@ class Somatic_LS(object):
 
         self._finalize_plot(ax, param_name, threshold, x_bound, legend, K, proportion)
         
-    def _finalize_plot(self, ax, param_name, threshold, x_bound, legend, K, proportion):
+    def _finalize_plot(self, ax:np.ndarray, param_name:str, threshold:float, x_bound:float, legend:bool, K:float, proportion:bool) -> None:
         ax.grid(True)
         ax.set_xlabel('Years')
         ax.set_ylabel('Population')
