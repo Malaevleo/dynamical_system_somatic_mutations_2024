@@ -94,14 +94,14 @@ $\dot C = rC(1 - \frac{C}{K}) + z \alpha X - \theta C$
 
 $\dot F = \alpha X (1 - z) +  \theta C$
 
-$m(t, X) = \frac{(C+ (1-z)\alpha X t + \theta C t )^{2} \sigma}{2} [1 - \frac{X}{K}]$
+$m(t, X) = \frac{(rC(1 - \frac{C}{K})+ \alpha X t)^{2} \sigma}{2}t^{2} [1 - \frac{X}{K}]$
 
 Code:
 ```
     def model_one(self, t, y, s, K, M, r, e, a, b, g, z, d) -> List:
         X, C, F = y
         m1 = 0.5 * s * (1 - X / K)
-        dXdt = r * X * (1 - X / K) - a * X - m1 * ((C + (1 - z) * a * X * t + d * C * t) ** 2)
+        dXdt = r * X * (1 - X / K) - a * X - m1 * ((rC(1 - C/K) + a * X) ** 2 * t ** 2)
         dCdt = r * C * (1 - C / K) + z * a * X - d * C
         dFdt = (1 - z) * a * X + d * C
         return [dXdt, dCdt, dFdt]
