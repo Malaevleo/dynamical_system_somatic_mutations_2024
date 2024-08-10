@@ -470,7 +470,7 @@ class Somatic_LS(object):
             max_der_ = np.argmax(der)
             _, axes = plt.subplots(1, 2, figsize = (12,8))
 
-            axes[0].plot(self.t[:-2]*self.coeff, deriv[:-2])
+            axes[0].plot(self.t[:-2]*self.coeff, deriv[:-1])
             if not logder:
                 axes[1].plot(self.t[:-2]*self.coeff, der)
             else:
@@ -547,7 +547,7 @@ class Somatic_LS(object):
 
             _, ax = plt.subplots(1, 2, figsize = (12,8))
 
-            ax[0].plot(x_, deriv[:-2])
+            ax[0].plot(x_, deriv[:-1])
             if not logder:
                 ax[1].plot(x_, der)
             else:
@@ -731,8 +731,7 @@ class Somatic_LS(object):
 
                 axs[i].plot(
                     self.t*self.coeff, sols[i][j].y[0] if not proportion else sols[i][j].y[0]/K, 
-                    label = f'Somatic population for {names[param_ind[i]]} = {np.round(ranges[i][j], 
-                    mantissa[param_ind[i]])}')
+                    label = f'Somatic population for {names[param_ind[i]]} = {np.round(ranges[i][j], mantissa[param_ind[i]])}')
                 
             axs[i].grid('True')
             axs[i].set_xlabel('Years')
@@ -756,7 +755,8 @@ class Somatic_LS(object):
             threshold:float, 
             x_bound:float, 
             legend:bool, 
-            config, K:float, 
+            config, 
+            K:float, 
             proportion:bool, 
             minimum:float=None, 
             maximum:float=None) -> None:
