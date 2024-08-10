@@ -94,7 +94,7 @@ $\dot C = rC(1 - \frac{C}{K}) + z \alpha X - \theta C$
 
 $\dot F = \alpha X (1 - z) +  \theta C$
 
-$m(t, X) = \frac{(rC(1 - \frac{C}{K})+ \alpha X t)^{2} \sigma}{2}t^{2} [1 - \frac{X}{K}]$
+$m(t, X) = \frac{(rC(1 - \frac{C}{K})+ \alpha X)^{2} \sigma}{2} t^{2} [1 - \frac{X}{K}]$
 
 Code:
 ```
