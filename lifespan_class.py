@@ -124,7 +124,7 @@ class Somatic_LS(object):
                     raise ValueError('There shouldn\'t be NaNs')
         return val
     
-    def custom_params(self, uploaded=None) -> Tuple[dict, dict, dict]:
+    def custom_params(self, uploaded=None) -> Tuple[dict, dict, float]:
         '''
         Upload your own parameters, threshold and initial conditions of a model
 
