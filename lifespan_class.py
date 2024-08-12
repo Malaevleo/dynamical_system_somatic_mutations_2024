@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import matplotlib.style
-import scipy.integrate
+import scipy.integrate._ivp.ivp
 from scipy.integrate import solve_ivp
 from scipy.signal import savgol_filter
 import pandas as pd
@@ -107,6 +107,8 @@ class SomaticLS(object):
             return self.threshold if not self.custom else self.custom_thr
         elif item == 'is dead':
             return isinstance(self.life, int)
+        else:
+            raise NameError('Cannot access this attribute')
 
     def _print_config(self) -> str:
         return f'''
@@ -488,6 +490,7 @@ class SomaticLS(object):
         if plot_thr:
             plt.axhline(thr, ls='--', color='r', label='Threshold')
 
+        plt.grid(True)
         plt.legend()
         plt.show()
     
@@ -508,6 +511,8 @@ class SomaticLS(object):
             plt.title('Mortality function')
             plt.axvline(maximum * self.coeff, color='r', ls='--')
             plt.axhline(max_der, ls='-.', color='g')
+            plt.grid(True)
+            plt.show()
         else:
             der = np.diff(deriv)
             der = savgol_filter(der, 550, 5)
@@ -535,6 +540,8 @@ class SomaticLS(object):
             axes[1].axvline(max_der_*self.coeff, color='r', ls='--')
             axes[1].axhline(max_, ls='-.', color='g')
             axes[0].axhline(max_der, ls='-.', color='g')
+            axes[0].grid(True)
+            axes[1].grid(True)
             print('Max derivative value:', np.round(max_, 0))
             print('Max derivative moment:', np.round(max_der_*self.coeff, 0))
 
@@ -582,6 +589,8 @@ class SomaticLS(object):
             plt.axhline(maximum, ls='--', c='r')
             plt.ylabel('Mortality function')
             plt.title('M(X)')
+            plt.grid(True)
+            plt.show()
 
         else:
             der = np.diff(deriv)
@@ -622,6 +631,8 @@ class SomaticLS(object):
             ax[1].axvline(thr_, color='r', ls='--')
             ax[1].axhline(max_der, ls='-.', color='g')
             ax[0].axhline(maximum, ls='-.', color='g')
+            ax[0].grid(True)
+            ax[1].grid(True)
 
             print('-'*50)
             print('-'*50)
@@ -647,12 +658,12 @@ class SomaticLS(object):
         for i in range(len(t)):
             if root == 1:
                 res[i] = 0.5*(K*a**2*b*t[i]**2 + 2.0*r)/(a**2*b*t[i]**2) - 1.4142135623731\
-                         * np.sqrt(0.125*K**2*a**4*b**2*t[i]**4 + K*a**3*b*t[i]**2 - 0.5*K*a**2*b*r*t[i]**2 + 0.5*r**2)\
-                         /(a**2*b*t[i]**2)
+                         * np.sqrt(0.125*K**2*a**4*b**2*t[i]**4 + K*a**3*b*t[i]**2 - 0.5*K*a**2*b*r*t[i]**2 + 0.5*r**2) \
+                         / (a**2*b*t[i]**2)
             elif root == 2:
                 res[i] = 0.5*(K*a**2*b*t[i]**2 + 2.0*r)/(a**2*b*t[i]**2) + 1.4142135623731\
-                         * np.sqrt(0.125*K**2*a**4*b**2*t[i]**4 + K*a**3*b*t[i]**2 - 0.5*K*a**2*b*r*t[i]**2 + 0.5*r**2)\
-                         /(a**2*b*t[i]**2)
+                         * np.sqrt(0.125*K**2*a**4*b**2*t[i]**4 + K*a**3*b*t[i]**2 - 0.5*K*a**2*b*r*t[i]**2 + 0.5*r**2) \
+                         / (a**2*b*t[i]**2)
         
         if proportions:
             res = res/K
@@ -669,6 +680,7 @@ class SomaticLS(object):
         if plot_thr:
             plt.axhline(thr, ls='--', c='r')
         plt.legend()
+        plt.grid(True)
         plt.show()
 
     def variator(
@@ -717,29 +729,28 @@ class SomaticLS(object):
         model = self.model
         
         if only_r:
-            self._vary_parameter('r', fraction, sampling_freq, model, init,
+            self._vary_parameter('r', fraction, sampling_freq, init,
                                  thr, x_bound, legend, config_, K, proportions, minimum, maximum)
         elif only_alpha:
-            self._vary_parameter('alpha', fraction, sampling_freq, model, init,
+            self._vary_parameter('alpha', fraction, sampling_freq, init,
                                  thr, x_bound, legend, config_, K, proportions, minimum, maximum)
         elif only_sigma:
-            self._vary_parameter('sigma', fraction, sampling_freq, model, init,
+            self._vary_parameter('sigma', fraction, sampling_freq, init,
                                  thr, x_bound, legend, config_, K, proportions, minimum, maximum)
         elif only_z:
-            self._vary_z_parameter(z_min, z_max, sampling_freq, model, init,
+            self._vary_z_parameter(z_min, z_max, sampling_freq, init,
                                    thr, x_bound, legend, config_, only_d, K, proportions)
         elif only_d:
-            self._vary_z_parameter(z_min, z_max, sampling_freq, model, init,
+            self._vary_z_parameter(z_min, z_max, sampling_freq, init,
                                    thr, x_bound, legend, config_, only_d, K, proportions)
         else:
-            self._variator(fraction, sampling_freq, model, config_, init, x_bound, legend,
+            self._variator(fraction, sampling_freq, config_, init, x_bound, legend,
                            thr, z_min, z_max, d_min, d_max, K, proportions)
 
     def _variator(
             self, 
             fraction: float,
             sampling_freq: int,
-            model, 
             config: dict,
             init: dict,
             x_bound: float,
@@ -781,7 +792,7 @@ class SomaticLS(object):
                 conf_[param_ind[n]] = param_value
 
                 sol = solve_ivp(
-                    model, 
+                    self.model,
                     t_span=(self.start, self.end),
                     y0=list(init.values()),
                     t_eval=self.t,
@@ -806,7 +817,7 @@ class SomaticLS(object):
                     self.t*self.coeff, sols[i][j].y[0] if not proportion else sols[i][j].y[0]/K, 
                     label=f'Somatic population for {names[param_ind[i]]} = {np.round(ranges[i][j], mantissa[param_ind[i]])}')
                 
-            axs[i].grid('True')
+            axs[i].grid(True)
             axs[i].set_xlabel('Years')
             axs[i].set_ylabel('Population')
             axs[i].set_xlim(0, x_bound)
@@ -823,12 +834,11 @@ class SomaticLS(object):
             param_name: str,
             fraction: float,
             sampling_freq: int,
-            model, 
             initial_conditions: dict,
             threshold: float,
             x_bound: float,
             legend: bool,
-            config, 
+            config: dict,
             K: float,
             proportion: bool,
             minimum: float,
@@ -845,7 +855,7 @@ class SomaticLS(object):
             conf[param_name] = param_value
 
             solution = solve_ivp(
-                model, 
+                self.model,
                 t_span=(self.start, self.end), 
                 y0=list(initial_conditions.values()), 
                 t_eval=self.t, 
@@ -870,7 +880,6 @@ class SomaticLS(object):
             z_min: float,
             z_max: float,
             steps: int,
-            model, 
             initial_conditions: dict,
             threshold: float,
             x_bound: float,
@@ -896,7 +905,7 @@ class SomaticLS(object):
                 conf['theta'] = z_value
 
             solution = solve_ivp(
-                model, 
+                self.model,
                 t_span=(self.start, self.end), 
                 y0=list(initial_conditions.values()), 
                 t_eval=self.t, 
