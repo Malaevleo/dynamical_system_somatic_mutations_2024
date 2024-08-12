@@ -24,7 +24,7 @@ class SomaticLS(object):
             style: str = 'bmh'):
 ```
 
-You can see that all the parameters have their default value.
+You can see that all the parameters have their default values.
 
 To start a session you should specify a variable and connect it with class.
 
