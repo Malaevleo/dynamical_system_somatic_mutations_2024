@@ -13,17 +13,17 @@ from functools import total_ordering
 @total_ordering
 class SomaticLS(object):
     def __init__(
-        self, 
-        organ: str = 'liver',
-        method: str = 'Radau',
-        start_time: float = 0,
-        end_time: float = 300,
-        include_mutants: bool = False,
-        equation: str = 'one',
-        custom_conf=None,
-        style: str = 'bmh',
-        print_methods: bool = False,
-        print_styles: bool = False):
+            self,
+            organ: str = 'liver',
+            method: str = 'Radau',
+            start_time: float = 0,
+            end_time: float = 300,
+            include_mutants: bool = False,
+            equation: str = 'one',
+            custom_conf=None,
+            style: str = 'bmh',
+            print_methods: bool = False,
+            print_styles: bool = False):
         """
             Class for lifespan simulation based on the only hallmark of aging - somatic mutations.
 
@@ -335,9 +335,9 @@ class SomaticLS(object):
         return thr.get(self.organ, thr['liver'])
 
     def lifespan(
-        self, 
-        custom_solution: scipy.integrate._ivp.ivp.OdeResult = None,
-        verbose: bool = True) -> int:
+            self,
+            custom_solution: scipy.integrate._ivp.ivp.OdeResult = None,
+            verbose: bool = True) -> int:
         """
             Calculate a lifespan of somatic population given a cutoff value.
 
@@ -400,14 +400,14 @@ class SomaticLS(object):
         return ls
     
     def plot_curves(
-        self, 
-        population: str = 'Somatic',
-        view_all: bool = False,
-        proportions: bool = True,
-        plot_thr: bool = True,
-        root: int = 1,
-        derivative: bool = False,
-        logder: bool = False) -> None:
+            self,
+            population: str = 'Somatic',
+            view_all: bool = False,
+            proportions: bool = True,
+            plot_thr: bool = True,
+            root: int = 1,
+            derivative: bool = False,
+            logder: bool = False) -> None:
         """
             Plot results of a simulation.
 
@@ -546,7 +546,10 @@ class SomaticLS(object):
             print('Max derivative moment:', np.round(max_der_*self.coeff, 0))
 
             if isinstance(life, int):
-                print('Ratio of max derivative to total lifespan in %:', np.round((max_der_ * self.coeff * 100)/(life * self.coeff), 1))
+                print(
+                    'Ratio of max derivative to total lifespan in %:',
+                    np.round((max_der_ * self.coeff * 100)/(life * self.coeff), 1)
+                )
 
         print('Max value:', np.round(max_der, 0))
         print('Max moment:', np.round(maximum * self.coeff, 0))
@@ -684,23 +687,23 @@ class SomaticLS(object):
         plt.show()
 
     def variator(
-        self, 
-        fraction: float = 5,
-        sampling_freq: int = 4,
-        x_bound: float = 300,
-        only_z: bool = False,
-        only_r: bool = False,
-        only_sigma: bool = False,
-        only_alpha: bool = False,
-        only_d: bool = False,
-        z_min: float = 0.,
-        z_max: float = 1.0,
-        d_min: float = 0.1,
-        d_max: float = 1.0,
-        legend: bool = True,
-        proportions: bool = True,
-        minimum: float = None,
-        maximum: float = None) -> None:
+            self,
+            fraction: float = 5,
+            sampling_freq: int = 4,
+            x_bound: float = 300,
+            only_z: bool = False,
+            only_r: bool = False,
+            only_sigma: bool = False,
+            only_alpha: bool = False,
+            only_d: bool = False,
+            z_min: float = 0.,
+            z_max: float = 1.0,
+            d_min: float = 0.1,
+            d_max: float = 1.0,
+            legend: bool = True,
+            proportions: bool = True,
+            minimum: float = None,
+            maximum: float = None) -> None:
         """
             Perturb the parameters of a system to see the results.
 
