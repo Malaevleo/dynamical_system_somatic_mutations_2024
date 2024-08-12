@@ -8,7 +8,15 @@ import numpy as np
 import json
 from typing import Tuple
 from functools import total_ordering
+import warnings
 
+warnings.filterwarnings('ignore')
+
+def print_methods():
+    print('RK45, RK23, Radau, DOP853, LSODA, BDF')
+
+def print_styles():
+    print(matplotlib.style.available)
 
 @total_ordering
 class SomaticLS(object):
@@ -21,9 +29,7 @@ class SomaticLS(object):
             include_mutants: bool = False,
             equation: str = 'one',
             custom_conf=None,
-            style: str = 'bmh',
-            print_methods: bool = False,
-            print_styles: bool = False):
+            style: str = 'bmh'):
         """
             Class for lifespan simulation based on the only hallmark of aging - somatic mutations.
 
@@ -38,12 +44,7 @@ class SomaticLS(object):
 
         set_eqs = ['one', 'two'] 
 
-        if print_styles:
-            print(matplotlib.style.available)
         plt.style.use(style)
-
-        if print_methods:
-            print('RK45, RK23, Radau, DOP853, LSODA, BDF')
 
         organs = ['liver', 'mouse liver', 'lungs', 'spinal cord']
         self.method = method
@@ -76,7 +77,7 @@ class SomaticLS(object):
         self.init = self.get_initial_conditions()
         self.threshold = self.get_threshold()
         self.model = self.get_model()
-        self.life = self.lifespan(verbose=False)
+        self.life = self.lifespan(verbose=False) if isinstance(self.lifespan(verbose=False), int) else None
 
         if self.equation not in set_eqs:
             raise ValueError('Please use only types (one, two) for equation settings')
@@ -98,7 +99,7 @@ class SomaticLS(object):
         if item == 'parameters':
             return self.conf_ if not self.custom else self.custom_conf
         elif item == 'lifespan':
-            return {'Mitosis': self.life, 'Years': self.life * self.coeff}
+            return {'Mitosis': self.life, 'Years': int(self.life * self.coeff)} if self.life is not None else None
         elif item == 'population':
             return self.calculate_population()
         elif item == 'initial':
@@ -412,7 +413,8 @@ class SomaticLS(object):
 
             ######
             Args: population - type of population, view_all - show only till the moment of death or not, 
-            proportions - plot as population/(population limit), plot_thr - plot cutoff value
+            proportions - plot as population/(population limit), plot_thr - plot cutoff value,
+            logder - semilogy for mortality function derivative.
 
             ######
             Output: plots, lifespan
