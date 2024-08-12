@@ -139,7 +139,7 @@ $\dot Y = \gamma Y(1 - \frac{Y}{M}) - \beta Y - \epsilon Y \Sigma(Y)$
 
 $m(t, X, Y) = \frac{(\alpha X + \beta Y)^{2} \sigma}{2} t^{2} [1 - \frac{X + Y}{K + M}]$
 
-$\Sigma(Y) = \frac{1}{1 + e^{-10(\frac{Y}{M} - 0.5)}}
+$\Sigma(Y) = \frac{1}{1 + e^{-10(\frac{Y}{M} - 0.5)}}$
 
 Code:
 ```
