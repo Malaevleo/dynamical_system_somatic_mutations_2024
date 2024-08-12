@@ -21,9 +21,7 @@ class SomaticLS(object):
             include_mutants: bool = False,
             equation: str = 'one',
             custom_conf=None,
-            style: str = 'bmh',
-            print_methods: bool = False,
-            print_styles: bool = False):
+            style: str = 'bmh'):
 ```
 
 You can see that all the parameters have their default value.
@@ -58,9 +56,9 @@ Example:
 organ.plot_curves(population='Somatic')
 ```
 
-Visual style of plots is defined by default as 'bmh', but you can always change it by initializing ```style``` argument in class. 
+Visual style of plots is defined by default as 'bmh', but you can always change it by initializing ```style``` argument in class. You can look at all styles by calling `lifespan_class.print_styles()`
 
-You can also look on the available methods for solving a system by setting ```print_methods``` to True.
+You can also look on the available methods for solving a system by calling ```lifespan_class.print_methods()``` to True.
 
 All of the parameters for organs described in the paper are located in the config which is defined using the function below
 
