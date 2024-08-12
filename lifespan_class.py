@@ -20,7 +20,6 @@ class SomaticLS(object):
         end_time: float = 300,
         include_mutants: bool = False,
         equation: str = 'one',
-        print_config: bool = True,
         custom_conf=None,
         style: str = 'bmh',
         print_methods: bool = False,
@@ -77,7 +76,7 @@ class SomaticLS(object):
         self.init = self.get_initial_conditions()
         self.threshold = self.get_threshold()
         self.model = self.get_model()
-        self.life = self.lifespan()
+        self.life = self.lifespan(verbose=False)
 
         if self.equation not in set_eqs:
             raise ValueError('Please use only types (one, two) for equation settings')
@@ -86,17 +85,31 @@ class SomaticLS(object):
             print('======= No two-equation system for spinal cord. Changing to Model 1 equation. =======')
             self.equation = 'one'
 
-        if print_config:
-            self._print_config()
-
     def __eq__(self, other):
         return self.life == other.life
 
     def __lt__(self, other):
         return self.life < other.life
 
-    def _print_config(self) -> None:
-        print(f'''
+    def __str__(self):
+        return self._print_config()
+
+    def __getitem__(self, item):
+        if item == 'parameters':
+            return self.conf_ if not self.custom else self.custom_conf
+        elif item == 'lifespan':
+            return {'Mitosis': self.life, 'Years': self.life * self.coeff}
+        elif item == 'population':
+            return self.calculate_population()
+        elif item == 'initial':
+            return self.init if not self.custom else self.custom_init
+        elif item == 'threshold':
+            return self.threshold if not self.custom else self.custom_thr
+        elif item == 'is dead':
+            return isinstance(self.life, int)
+
+    def _print_config(self) -> str:
+        return f'''
               CONFIG FOR SIMULATION HAS BEEN CREATED
               {'-'*40}
               Final parameters set:
@@ -107,7 +120,7 @@ class SomaticLS(object):
               --solver method: {self.method},
               --include mutants: {self.include}
               {'-'*40}
-              ''')
+              '''
     
     @staticmethod
     def _clear_dict(val: dict) -> dict:
@@ -321,7 +334,8 @@ class SomaticLS(object):
 
     def lifespan(
         self, 
-        custom_solution: scipy.integrate._ivp.ivp.OdeResult = None) -> int:
+        custom_solution: scipy.integrate._ivp.ivp.OdeResult = None,
+        verbose: bool = True) -> int:
         """
             Calculate a lifespan of somatic population given a cutoff value.
 
@@ -331,6 +345,7 @@ class SomaticLS(object):
             ######
             Output: a moment when the population reaches a cutoff value.
         """
+
         if self.custom:
             thr = self.custom_thr
             K = self.custom_conf['K']
@@ -357,25 +372,28 @@ class SomaticLS(object):
                 break
 
         if len(l) != 0:
-            if self.organ == 'mouse liver':
-                print('Life expectancy (years):', np.round(l[0] * self.coeff, 2))
-            else:
-                print('Life expectancy (years):', np.round(l[0] * self.coeff))
-            print('-'*50)
+            if verbose:
+                if self.organ == 'mouse liver':
+                    print('Life expectancy (years):', np.round(l[0] * self.coeff, 2))
+                else:
+                    print('Life expectancy (years):', np.round(l[0] * self.coeff))
+                print('-'*50)
             ls = l[0]
         else:
-            print('Haven\'t died')
-            print('-'*50)
+            if verbose:
+                print('Haven\'t died')
+                print('-'*50)
             ls = []
 
-        if len(k) != 0:
-            if arr.y[0][0] == K:
-                print('No resection')
+        if verbose:
+            if len(k) != 0:
+                if arr.y[0][0] == K:
+                    print('No resection')
+                else:
+                    print('Time of regeneration of somatic cells (years):', np.round(k[0] * self.coeff, 2))
             else:
-                print('Time of regeneration of somatic cells (years):', np.round(k[0] * self.coeff, 2))
-        else:
-            if arr.y[0][0] != K:
-                print('Haven\'t regenerated')
+                if arr.y[0][0] != K:
+                    print('Haven\'t regenerated')
         
         return ls
     
@@ -388,7 +406,6 @@ class SomaticLS(object):
         root: int = 1,
         derivative: bool = False,
         logder: bool = False) -> None:
-
         """
             Plot results of a simulation.
 
@@ -630,10 +647,12 @@ class SomaticLS(object):
         for i in range(len(t)):
             if root == 1:
                 res[i] = 0.5*(K*a**2*b*t[i]**2 + 2.0*r)/(a**2*b*t[i]**2) - 1.4142135623731\
-                         * np.sqrt(0.125*K**2*a**4*b**2*t[i]**4 + K*a**3*b*t[i]**2 - 0.5*K*a**2*b*r*t[i]**2 + 0.5*r**2)/(a**2*b*t[i]**2)
+                         * np.sqrt(0.125*K**2*a**4*b**2*t[i]**4 + K*a**3*b*t[i]**2 - 0.5*K*a**2*b*r*t[i]**2 + 0.5*r**2)\
+                         /(a**2*b*t[i]**2)
             elif root == 2:
                 res[i] = 0.5*(K*a**2*b*t[i]**2 + 2.0*r)/(a**2*b*t[i]**2) + 1.4142135623731\
-                         * np.sqrt(0.125*K**2*a**4*b**2*t[i]**4 + K*a**3*b*t[i]**2 - 0.5*K*a**2*b*r*t[i]**2 + 0.5*r**2)/(a**2*b*t[i]**2)
+                         * np.sqrt(0.125*K**2*a**4*b**2*t[i]**4 + K*a**3*b*t[i]**2 - 0.5*K*a**2*b*r*t[i]**2 + 0.5*r**2)\
+                         /(a**2*b*t[i]**2)
         
         if proportions:
             res = res/K
@@ -675,7 +694,8 @@ class SomaticLS(object):
 
             ######
             Args:
-            fraction for interval as {parameter/fraction; parameter*fraction}, sampling_freq - amount of equidistant points to separate the interval,
+            fraction for interval as {parameter/fraction; parameter*fraction},
+            sampling_freq - amount of equidistant points to separate the interval,
             x_bound = cut the plot on this value of time, only_* - variate only * parameter,
             {z_min; z_max} and {d_min;d_max} - bounds for proportion of alive mutants and their death rate,
             legend - show legend on plot or not, proportions - whether on not to plot population as a fraction of K.
