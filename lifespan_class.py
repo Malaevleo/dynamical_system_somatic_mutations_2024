@@ -310,10 +310,9 @@ class SomaticLS(object):
         else:
             conf = tuple(self.custom_conf.values())
             initial = self.custom_init
-        model = self.model
 
         solution = solve_ivp(
-            model,
+            self.model,
             t_span=(self.start, self.end), 
             y0=list(initial.values()), 
             t_eval=self.t, 
@@ -766,7 +765,7 @@ class SomaticLS(object):
             K: float,
             proportion: bool) -> None:
         
-        if (self.equation == 'one') & (self.include is False):
+        if (self.equation == 'one') & (not self.include):
             param_ind = ['sigma', 'alpha', 'r']
             sols = [[], [], []]
             print('No alive mutants and Model 1 is used. Varying only sigma, alpha and r.')
@@ -807,7 +806,7 @@ class SomaticLS(object):
                 
                 sols[n].append(sol)
 
-        if (self.equation == 'one') & (self.include is False):
+        if (self.equation == 'one') & (not self.include):
             _, axs = plt.subplots(1, 3, figsize=(25, 8))
         else:
             _, axs = plt.subplots(2, 2, figsize=(20, 14))
