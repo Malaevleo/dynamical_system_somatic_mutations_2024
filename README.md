@@ -7,26 +7,23 @@
 
 ## First steps
 
-You can look on the module code in ```lifespan_class.py```. To work with it, one should import it in his notebook by ```from lifespan_class import Somatic_LS```.
+You can look on the module code in ```lifespan_class.py```. To work with it, one should import it in his notebook by ```from lifespan_class import SomaticLS```.
 
 The ```__init__``` function has a following set of arguments:
 ```
-class Somatic_LS(object):
+class SomaticLS(object):
     def __init__(
-        self, 
-        organ:str='liver', 
-        method:str='RK45', 
-        start_time:float=0, 
-        end_time:float=300, 
-        include_mutants:bool=False, 
-        equation:str='single',
-        print_config:bool=True,
-        custom_conf:List=None,
-        custom_thr:float=None,
-        custom_init:List=None,
-        style:str='bmh',
-        print_methods:bool=False,
-        print_styles:bool=False):
+            self,
+            organ: str = 'liver',
+            method: str = 'Radau',
+            start_time: float = 0,
+            end_time: float = 300,
+            include_mutants: bool = False,
+            equation: str = 'one',
+            custom_conf=None,
+            style: str = 'bmh',
+            print_methods: bool = False,
+            print_styles: bool = False):
 ```
 
 You can see that all the parameters have their default value.
@@ -36,7 +33,15 @@ To start a session you should specify a variable and connect it with class.
 Example:
 
 ```
-spinal_conf_ = Somatic_LS(organ = 'spinal cord', end_time=1500, include_mutants=False, method='RK45')
+spinal_conf_ = SomaticLS(organ='spinal cord', end_time=1500, include_mutants=False, method='RK45')
+```
+
+Also, you can initialise a constructor with a `.restart()` method.
+
+Example:
+
+```
+organ = spinal_conf_.restart(organ='liver', end_time=200)
 ```
 
 As all the parameters have default values you can launch it like this:
@@ -50,7 +55,7 @@ Next you can call any method that you want and get a desired result:
 
 Example:
 ```
-organ.plot_curves(population = 'somatic')
+organ.plot_curves(population='Somatic')
 ```
 
 Visual style of plots is defined by default as 'bmh', but you can always change it by initializing ```style``` argument in class. 
@@ -60,19 +65,29 @@ You can also look on the available methods for solving a system by setting ```pr
 All of the parameters for organs described in the paper are located in the config which is defined using the function below
 
 ```
- def set_config(self) -> List:
+ def set_config(self) -> dict:
         configs = {
-            'liver': [0.087, 2e11, 2e11/94000, 4/407, 0.064, (3.5e-9)*9.6e-3, (1.83e-9)*9.6e-3, 4/407, 0.9, 0.239],
-            'mouse liver': [0.087, 3.37e8, 3.37e8/94000, 63/407, 0.064, 35*(3.5e-9), 35*(1.83e-9), 63/407, 0.9, 0.239],
-            'lungs': [0.073, 10.5e9, 0.07*10.5e9, 0.001/407, 0.007, 6.392476819356688e-12, 6.392476819356688e-12 / 1.9126, 0.001/407, 0.9, 0.239],
-            'spinal cord': [0.085, 222e6, 0, 0, 0, 0.9047619*(3.5e-9)*0.0013563, 0, 0, 0.9, 0.239]
+            'liver': {
+                'sigma': 0.087, 'K': 2e11, 'M': 2e11/94000, 'r': 4/407, 'eps': 0.064,
+                'alpha': 3.5e-9*9.6e-3, 'beta': 1.83e-9*9.6e-3, 'g': 4/407, 'z': 0.9, 'theta': 0.239
+                },
+            'mouse liver': {
+                'sigma': 0.087, 'K': 3.37e8, 'M': 3.37e8/94000, 'r': 63/407, 'eps': 0.064,
+                'alpha': 35*3.5e-9, 'beta': 35*1.83e-9, 'g': 63/407, 'z': 0.9, 'theta': 0.239
+                },
+            'lungs': {
+                'sigma': 0.073, 'K': 10.5e9, 'M': 0.07*10.5e9, 'r': 0.001/407, 'eps': 0.007,
+                'alpha': 6.392476819356688e-12, 'beta': 6.392476819356688e-12 / 1.9126, 'g': 0.001/407, 'z': 0.9, 'theta': 0.239
+                },
+            'spinal cord': {
+                'sigma': 0.085, 'K': 222e6, 'M': 0, 'r': 0, 'eps': 0,
+                'alpha': 0.9047619*3.5e-9*0.0013563, 'beta': 0, 'g': 0, 'z': 0.9, 'theta': 0.239
+                }
         }
         return configs.get(self.organ, configs['liver'])
 ```
 
-As the solving method we use 'RK45' because after a lot of experimentation we can conclude that it is the most stable one.
-
-## Choosing model
+## Choosing a model
 
 We grant access to the two models featured in the article. 
 
@@ -98,13 +113,15 @@ $m(t, X) = \frac{(rC(1 - \frac{C}{K})+ \alpha X)^{2} \sigma}{2} t^{2} [1 - \frac
 
 Code:
 ```
-    def model_one(self, t, y, s, K, M, r, e, a, b, g, z, d) -> List:
-        X, C, F = y
+   @staticmethod
+    def _model_one(t, y, s, K, M, r, e, a, b, g, z, d) -> list:
+        X, C, F, m = y
         m1 = 0.5 * s * (1 - X / K)
-        dXdt = r * X * (1 - X / K) - a * X - m1 * ((rC(1 - C/K) + a * X) ** 2 * t ** 2)
+        dXdt = r * X * (1 - X / K) - a * X - m1 * (r * C * (1 - C / K) + a * X) ** 2 * t ** 2
         dCdt = r * C * (1 - C / K) + z * a * X - d * C
         dFdt = (1 - z) * a * X + d * C
-        return [dXdt, dCdt, dFdt]
+        dmdt = m1 * (r * C * (1 - C / K) + a * X) ** 2 * t ** 2
+        return [dXdt, dCdt, dFdt, dmdt]
 ```
 
 ### Model 2 ('two equations')
@@ -116,19 +133,21 @@ This model can be applied to the liver and lungs and it should always be used in
 
 Dynamical system:
 
-$\dot X = rX(1 - \frac{X}{K}) + 2 \epsilon Y - \alpha X - m(t, X, Y)$
+$\dot X = (rX + 2 \epsilon Y \Sigma(Y))(1 - \frac{X}{K}) - \alpha X - m(t, X, Y)$
 
-$\dot Y = \gamma Y(1 - \frac{Y}{M}) - \beta Y - \epsilon Y$
+$\dot Y = \gamma Y(1 - \frac{Y}{M}) - \beta Y - \epsilon Y \Sigma(Y)$
 
 $m(t, X, Y) = \frac{(\alpha X + \beta Y)^{2} \sigma}{2} t^{2} [1 - \frac{X + Y}{K + M}]$
+
+$\Sigma(Y) = \frac{1}{1 + e^{-10(\frac{Y}{M} - 0.5)}}
 
 Code:
 ```
     def model_two(self, t, y, s, K, M, r, e, a, b, g, z, d) -> List:
         X, Y, m = y
         m1 = 0.5 * s * (1 - (X + Y) / (K + M))
-        dXdt = r * X * (1 - X / K) + 2 * e * Y - a * X - m1 * ((a * X + b * Y) ** 2 * t ** 2)
-        dYdt = g * Y * (1 - Y / M) - e * Y - b * Y
+        dXdt = (r * X + 2 * e * Y * self._sigmoid(Y/M)) * (1 - X / K) - a * X - m1 * ((a * X + b * Y) ** 2 * t ** 2)
+        dYdt = g * Y * (1 - Y / M) - e * Y * self._sigmoid(Y/M) - b * Y
         dmdt = 0.5 * s * (1 - (X + Y) / (K + M)) * ((a * X + b * Y) ** 2 * t ** 2)
         return [dXdt, dYdt, dmdt]
 ```
@@ -150,7 +169,7 @@ Equation we use in this example is 'single' which correspond to the Model 1. To 
 To obtain the lifespan value and plot the somatic cells population this code is used:
 
 ```
-z.plot_curves(view_all=True, plot_thr=True)
+z.plot_curves()
 ```
 There are multiple options in the plot_curves function:
 
@@ -170,7 +189,7 @@ This function allows to observe how changes in different vairables affect overal
 z.variator(x_bound=300, d_max=0.9, d_min=0.1, fraction=10, sampling_freq=10, z_min=0.5, z_max=0.9)
 ```
 
-By deafult only the $\alpha , \theta, z, \sigma$ are varied for Model 1 and $\alpha$, $\sigma$, $\beta$ and $\epsilon$ for Model 2. If you want you can vary $r$ by using only_r = True option in the variator function.
+By deafult only the $\alpha , \theta, z, \sigma$ are varied for Model 1 with 'mutants' and $\alpha$, $\sigma$, $\beta$ and $\epsilon$ for Model 2. If you want you can vary $r$ by using only_r = True option in the variator function, you can also specify upper and lower bounds explicitely with parameters `minimum` and `maximum`. For Model 1 without 'mutants' the parameters are $\alpha$, $\sigma$ and $r$.
 
 ## Documentation
 
@@ -230,23 +249,35 @@ def variator(
         '''
 ```
 
-Variable types are provided for all methods of a class. Text documentation is given for ```__init__```, ```.plot_curves()```, ```.variator()```, ```.lifespan()``` and ```.calculate_population()```. For better understanding of how the class methods work, one can look in ```testing.ipynb``` which is located in this repository.
+Variable types are provided for all methods of a class. Text documentation is given for ```__init__```, ```.plot_curves()```, ```.variator()```, ```.lifespan()``` and ```.calculate_population()```. For better understanding of how the class methods work, one can look in ```tutorial.ipynb``` which is located in this repository.
 
 ## Simulation with custom parameters
 
 You can also run the simulation with your own config defined. Given a name of an organ that is not specified inside ```__init__``` will result in simulation with custom set of parameters. 
 
-You should specify your config, initial conditions and cutoff value inside a class. 
+You should specify your config, initial conditions and cutoff value inside a class. For that you can pass a path to a .json, .xlxs, .csv file or a pandas.DataFrame, python dict. 
 
 Example:
 
 ```
-conf = [2*0.087, 2*2e11, 2*2e11/94000, 2*4/407, 2*0.064, 2*(3.5e-9)*9.6e-3, 2*(1.83e-9)*9.6e-3, 2*4/407, 0.9, 0.239]
-custom_init_two = [0.6*conf[1], 0.6*conf[2], 0]
-custom_init_single = [0.6*conf[1], 0, 0, 0]
-custom_thr = 0.2
+dic = {
+    'parameters':{
+    'K':1.,
+    'M':1.,
+    'alpha':1.,
+    'beta':1.,
+    'sigma':0,
+    'r':0,
+    'g':0,
+    'z':0,
+    'theta':0,
+    'eps':0
+    },
+    'initial conditions':{'K':0.31,'M':0.31, 'm':0},
+    'threshold':0.3
+}
 
-custom = Somatic_LS(organ='custom', equation='single',include_mutants=True, custom_conf=conf, custom_init=custom_init_single, custom_thr=custom_thr)
+sim_dic = SomaticLS(organ='c', equation='two', custom_conf=dic)
 ```
 
 The program will give you a reminder that you use your own parameters now:
@@ -257,12 +288,12 @@ This organ is not specified. Use your custom config, threshold and initial condi
               CONFIG FOR SIMULATION HAS BEEN CREATED
               ----------------------------------------
               Final parameters set:
-              --organ: custom,
+              --organ: c,
               --start: 0.0 years,
               --end: 300.0 years,
-              --type of system: single equation system,
-              --solver method: RK45,
-              --include mutants: True
+              --type of system: Model two equation system,
+              --solver method: Radau,
+              --include mutants: False
               ----------------------------------------
                             
 ```
@@ -273,16 +304,4 @@ Note that the program will exit with an error if you'll specify a custom organ w
 ValueError: Please specify your parameters, initial conditions and threshold value when using not built-in organs.
 ```
 
-NB! When defining a set of parameters for your own system you need to remember that it should be a **list** object and the order should be the following: **[ $\sigma$ , $K$, $M$, $r$, $\epsilon$, $\alpha$, $\beta$, $\gamma$, $z$, $\theta$]**. At this version the module accepts parameters only in this order. If you use *Model 2* for simulations, you still need to set $z$ and $\theta$ values as parameters are given in the same manner to both types of models.
-
-Also, initial conditions are given the following way for Model 2: [X_0, Y_0, $\mu_0$] and for Model 1: [X_0, $C_0$, $F_0$, $\mu_0$,].
-
-After setting your parameters and conditions for solving a system you can simply call all the necessary functions as class methods without specifying custom params anymore:
-
-```
-custom.plot_curves()
-```
-or
-```
-custom.variator()
-```
+After this you can call any class method and get the results. For a more detailed example of custom config usage one can look in tutorial.ipynb.
