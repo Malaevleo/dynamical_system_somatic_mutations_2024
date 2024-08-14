@@ -6,17 +6,20 @@ from scipy.signal import savgol_filter
 import pandas as pd
 import numpy as np
 import json
-from typing import Tuple
+from typing import Tuple, Dict, List
 from functools import total_ordering
 import warnings
 
 warnings.filterwarnings('ignore')
 
+
 def print_methods():
     print('RK45, RK23, Radau, DOP853, LSODA, BDF')
 
+
 def print_styles():
     print(matplotlib.style.available)
+
 
 @total_ordering
 class SomaticLS(object):
@@ -35,16 +38,17 @@ class SomaticLS(object):
 
             ######
             Args: organ for simulation, method for solve_ivp, 
-            start and end times in years, include alive mutants in Model 1 system or not, 
-            type of system, whether to print config, custom_conf - specify your custom parameters for a system.
+                  start and end times in years, include alive mutants in Model 1 system or not,
+                  type of system, whether to print config, custom_conf - specify your custom parameters for a system.
 
             ######
-            Output: populations, plots and variations.
+            Output: constructor
         """
 
         set_eqs = ['one', 'two'] 
 
-        plt.style.use(style)
+        self.style = style
+        plt.style.use(self.style)
 
         organs = ['liver', 'mouse liver', 'lungs', 'spinal cord']
         self.method = method
@@ -108,6 +112,10 @@ class SomaticLS(object):
             return self.threshold if not self.custom else self.custom_thr
         elif item == 'is dead':
             return isinstance(self.life, int)
+        elif item == 'start time':
+            return self.start
+        elif item == 'end time':
+            return self.end
         else:
             raise NameError('Cannot access this attribute')
 
@@ -126,7 +134,7 @@ class SomaticLS(object):
               '''
     
     @staticmethod
-    def _clear_dict(val: dict) -> dict:
+    def _clear_dict(val: dict) -> Dict:
         l_cols = ['parameters', 'initial conditions', 'threshold']
         list_essential = ['K', 'M', 'alpha', 'sigma', 'beta', 'eps', 'r', 'g', 'z', 'theta']
         list_total = []
@@ -197,7 +205,7 @@ class SomaticLS(object):
         thr = custom_conf['threshold']['K']
         return params, init, thr
     
-    def set_config(self) -> dict:
+    def set_config(self) -> Dict:
         configs = {
             'liver': {
                 'sigma': 0.087, 'K': 2e11, 'M': 2e11/94000, 'r': 4/407, 'eps': 0.064,
@@ -209,7 +217,8 @@ class SomaticLS(object):
                 },
             'lungs': {
                 'sigma': 0.073, 'K': 10.5e9, 'M': 0.07*10.5e9, 'r': 0.001/407, 'eps': 0.007,
-                'alpha': 6.392476819356688e-12, 'beta': 6.392476819356688e-12 / 1.9126, 'g': 0.001/407, 'z': 0.9, 'theta': 0.239
+                'alpha': 6.392476819356688e-12, 'beta': 6.392476819356688e-12 / 1.9126, 'g': 0.001/407,
+                'z': 0.9, 'theta': 0.239
                 },
             'spinal cord': {
                 'sigma': 0.085, 'K': 222e6, 'M': 0, 'r': 0, 'eps': 0,
@@ -222,22 +231,45 @@ class SomaticLS(object):
     def _sigmoid(z: float) -> float:
         return 1 / (1 + np.exp(-10 * (z - 0.5)))
 
-    @classmethod
-    def restart(cls, *args, **kwargs):
+    def restart(self, memory: bool = False, *args, **kwargs):
         """
         Restart the initialisation of a system without unnecessary verbosity
 
         ######
-        Args: any of the constructor arguments
+        Args: any of the constructor arguments,
+              memory - whether to change given attributes without restarting the constructor
 
         ######
-        Output: new constructor
+        Output: new exemplar
         """
 
-        return cls(*args, **kwargs)
+        if not memory:
+            return SomaticLS.__init__(self, *args, **kwargs)
+        else:
+            args_passed = tuple(kwargs.keys())
+
+            for el in args_passed:
+                if el == 'start_time':
+                    self.start = kwargs[el] / self.coeff
+                elif el == 'end_time':
+                    self.end = kwargs[el] / self.coeff
+                elif el == 'method':
+                    self.method = kwargs[el]
+                elif el == 'include_mutants':
+                    self.include = kwargs[el]
+                elif el == 'organ':
+                    self.organ = kwargs[el]
+                elif el == 'equation':
+                    self.equation = kwargs[el]
+                elif el == 'custom_conf':
+                    self.custom_conf, self.custom_init, self.custom_thr = self.custom_params(kwargs[el])
+                elif el == 'style':
+                    self.style = kwargs[el]
+                else:
+                    raise ValueError('No such attribute')
 
     @staticmethod
-    def _model_one(t, y, s, K, M, r, e, a, b, g, z, d) -> list:
+    def _model_one(t, y, s, K, M, r, e, a, b, g, z, d) -> List:
         X, C, F, m = y
         m1 = 0.5 * s * (1 - X / K)
         dXdt = r * X * (1 - X / K) - a * X - m1 * (r * C * (1 - C / K) + a * X) ** 2 * t ** 2
@@ -246,7 +278,7 @@ class SomaticLS(object):
         dmdt = m1 * (r * C * (1 - C / K) + a * X) ** 2 * t ** 2
         return [dXdt, dCdt, dFdt, dmdt]
 
-    def _model_two(self, t, y, s, K, M, r, e, a, b, g, z, d) -> list:
+    def _model_two(self, t, y, s, K, M, r, e, a, b, g, z, d) -> List:
         X, Y, m = y
         m1 = 0.5 * s * (1 - (X + Y) / (K + M))
         dXdt = (r * X + 2 * e * Y * self._sigmoid(Y / M)) * (1 - X / K) - a * X - m1 * (a * X + b * Y) ** 2 * t ** 2
@@ -254,7 +286,7 @@ class SomaticLS(object):
         dmdt = m1 * (a * X + b * Y) ** 2 * t ** 2
         return [dXdt, dYdt, dmdt]
     
-    def get_initial_conditions(self) -> dict:
+    def get_initial_conditions(self) -> Dict:
         K = self.conf_['K']
         M = self.conf_['M']
 
@@ -299,7 +331,7 @@ class SomaticLS(object):
             Calculate populations by solving differential equation system numerically.
 
             ######
-            Args: class attributes
+            Args: instance attributes
 
             ######
             Output: solve_ivp object with calculated cell populations
@@ -342,7 +374,8 @@ class SomaticLS(object):
             Calculate a lifespan of somatic population given a cutoff value.
 
             ######
-            Args: custom_solution - your own solve_ivp object
+            Args: custom_solution - your own solve_ivp object,
+                  verbose - whether to print lifespans and regen times
 
             ######
             Output: a moment when the population reaches a cutoff value.
@@ -413,8 +446,8 @@ class SomaticLS(object):
 
             ######
             Args: population - type of population, view_all - show only till the moment of death or not, 
-            proportions - plot as population/(population limit), plot_thr - plot cutoff value,
-            logder - semilogy for mortality function derivative.
+                  proportions - plot as population/(population limit), plot_thr - plot cutoff value,
+                  logder - semilogy for mortality function derivative.
 
             ######
             Output: plots, lifespan
@@ -709,12 +742,11 @@ class SomaticLS(object):
             Perturb the parameters of a system to see the results.
 
             ######
-            Args:
-            fraction for interval as {parameter/fraction; parameter*fraction},
-            sampling_freq - amount of equidistant points to separate the interval,
-            x_bound = cut the plot on this value of time, only_* - variate only * parameter,
-            {z_min; z_max} and {d_min;d_max} - bounds for proportion of alive mutants and their death rate,
-            legend - show legend on plot or not, proportions - whether on not to plot population as a fraction of K.
+            Args: fraction for interval as {parameter/fraction; parameter*fraction},
+                  sampling_freq - amount of equidistant points to separate the interval,
+                  x_bound = cut the plot on this value of time, only_* - variate only * parameter,
+                  {z_min; z_max} and {d_min;d_max} - bounds for proportion of alive mutants and their death rate,
+                  legend - show legend on plot or not, proportions - whether on not to plot population as a fraction of K.
 
             ######
             Output: plots and lifespans
