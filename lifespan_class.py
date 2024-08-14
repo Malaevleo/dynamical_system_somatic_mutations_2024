@@ -244,7 +244,7 @@ class SomaticLS(object):
         """
 
         if not memory:
-            return SomaticLS.__init__(self, *args, **kwargs)
+            return SomaticLS(*args, **kwargs)
         else:
             args_passed = tuple(kwargs.keys())
 
