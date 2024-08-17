@@ -197,54 +197,63 @@ For example method .plot_curves():
 
 ```
 def plot_curves(
-        self, 
-        population:str='somatic', 
-        view_all:bool=False, 
-        proportions:bool=True, 
-        plot_thr:bool=True) -> None:
+            self,
+            population: str = 'Somatic',
+            view_all: bool = False,
+            proportions: bool = True,
+            plot_thr: bool = True,
+            root: int = 1,
+            derivative: bool = False,
+            logder: bool = False) -> None:
 
-        '''
-            ####Plot results of simulation.
+        """
+            Plot results of a simulation.
 
             ######
             Args: population - type of population, view_all - show only till the moment of death or not, 
-            proportions - plot as population/(population limit), plot_thr - plot cutoff value
+                  proportions - plot as population/(population limit), plot_thr - plot cutoff value,
+                  logder - semilogy for mortality function derivative.
 
             ######
-            Output: matplotlib.pyplot plots, lifespan
-        '''
+            Output: plots, lifespan
+        """
 ```
 Or .variator():
 
 ```
 def variator(
-        self, 
-        fraction:float=5, 
-        sampling_freq:int=4, 
-        x_bound:float=300, 
-        only_z:bool=False, 
-        only_r:bool=False, 
-        only_sigma:bool=False, 
-        only_alpha:bool=False, 
-        only_d:bool=False,
-        z_min:float=0.1, 
-        z_max:float=0.9,
-        d_min:float=0.1,
-        d_max:float=0.9, 
-        legend:bool=True,
-        proportions:bool=True) -> None:
+            self,
+            fraction: float = 5,
+            sampling_freq: int = 4,
+            x_bound: float = 300,
+            only_z: bool = False,
+            only_r: bool = False,
+            only_sigma: bool = False,
+            only_alpha: bool = False,
+            only_d: bool = False,
+            only_g: bool = False,
+            z_min: float = 0.,
+            z_max: float = 1.0,
+            d_min: float = 0.1,
+            d_max: float = 1.0,
+            legend: bool = True,
+            proportions: bool = True,
+            minimum: float = None,
+            maximum: float = None) -> None:
 
-        '''
-            ####Perturb the parameters of a system to see the results.
+        """
+            Perturb the parameters of a system to see the results.
 
             ######
-            Args: fraction for interval as {parameter/fraction; parameter*fraction}, sampling_freq - amount of equidistant points to separate the interval, 
-            x_bound = cut the plot on this value of time, only_* - variate only * parameter, {z_min; z_max} and {d_min;d_max} - bounds for proportion of alive mutants and their death rate,
-            legend - show legend on plot or not, proportions - whether on not to plot population as a fraction of K.
+            Args: fraction for interval as {parameter/fraction; parameter*fraction},
+                  sampling_freq - amount of equidistant points to separate the interval,
+                  x_bound = cut the plot on this value of time, only_* - variate only * parameter,
+                  {z_min; z_max} and {d_min;d_max} - bounds for proportion of alive mutants and their death rate,
+                  legend - show legend on plot or not, proportions - whether on not to plot population as a fraction of K.
 
             ######
             Output: plots and lifespans
-        '''
+        """
 ```
 
 Variable types are provided for all methods of a class. Text documentation is given for ```__init__```, ```.plot_curves()```, ```.variator()```, ```.lifespan()``` and ```.calculate_population()```. For better understanding of how the class methods work, one can look in ```tutorial.ipynb``` which is located in this repository.
