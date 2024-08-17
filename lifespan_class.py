@@ -7,7 +7,6 @@ import pandas as pd
 import numpy as np
 import json
 from typing import Tuple, Dict, List
-from functools import total_ordering
 import warnings
 
 warnings.filterwarnings('ignore')
@@ -21,7 +20,6 @@ def print_styles():
     print(matplotlib.style.available)
 
 
-@total_ordering
 class SomaticLS(object):
     def __init__(
             self,
@@ -69,6 +67,7 @@ class SomaticLS(object):
             self.conf_['theta'] = 0
             self.conf_['z'] = 0
 
+        self.end_time = end_time
         self.coeff = 21.5 / (365.25 * 24)
         self.start = int(start_time / self.coeff)
         self.end = int(np.round(end_time / self.coeff))
@@ -91,10 +90,54 @@ class SomaticLS(object):
             self.equation = 'one'
 
     def __eq__(self, other):
-        return self.life == other.life
+        if (self.life is not None) & (other.life is not None):
+            return self.life == other.life
+        else:
+            if self.life is None:
+                bad = self.organ
+            else:
+                bad = other.organ
+            print('One of the organs or both of them haven\'t died. Try to set higher simulation time for {}'.format(bad))
 
     def __lt__(self, other):
-        return self.life < other.life
+        if (self.life is not None) & (other.life is not None):
+            return self.life < other.life
+        else:
+            if self.life is None:
+                bad = self.organ
+            else:
+                bad = other.organ
+            print('One of the organs or both of them haven\'t died. Try to set higher simulation time for {}'.format(bad))
+    
+    def __le__(self, other):
+        if (self.life is not None) & (other.life is not None):
+            return self.life <= other.life
+        else:
+            if self.life is None:
+                bad = self.organ
+            else:
+                bad = other.organ
+            print('One of the organs or both of them haven\'t died. Try to set higher simulation time for {}'.format(bad))
+
+    def __gt__(self, other):
+        if (self.life is not None) & (other.life is not None):
+            return self.life > other.life
+        else:
+            if self.life is None:
+                bad = self.organ
+            else:
+                bad = other.organ
+            print('One of the organs or both of them haven\'t died. Try to set higher simulation time for {}'.format(bad))
+
+    def __ge__(self, other):
+        if (self.life is not None) & (other.life is not None):
+            return self.life >= other.life
+        else:
+            if self.life is None:
+                bad = self.organ
+            else:
+                bad = other.organ
+            print('One of the organs or both of them haven\'t died. Try to set higher simulation time for {}'.format(bad))
 
     def __str__(self):
         return self._print_config()
@@ -482,6 +525,8 @@ class SomaticLS(object):
             elif population == 'Stable points':
                 self._plot_stable_points(root, proportions, plot_thr)
                 return None
+            else:
+                raise NameError('There is no such population in this system')
             
         elif self.equation == 'two':
             M = self.conf_['M']
@@ -497,6 +542,8 @@ class SomaticLS(object):
                 return None
             elif population == 'Stable points':
                 raise NameError('There are no analytic solutions of this system -> there are no stable points')
+            else:
+                raise NameError('There is no such population in this system')
         
         if proportions:
             if population == 'Somatic':
@@ -730,6 +777,7 @@ class SomaticLS(object):
             only_sigma: bool = False,
             only_alpha: bool = False,
             only_d: bool = False,
+            only_g: bool = False,
             z_min: float = 0.,
             z_max: float = 1.0,
             d_min: float = 0.1,
@@ -756,13 +804,14 @@ class SomaticLS(object):
             init = self.init
             thr = self.threshold
             K = self.conf_['K']
+            M = self.conf_['M']
             config_ = self.conf_
         else:
             init = self.custom_init
             thr = self.custom_thr
             config_ = self.custom_conf
             K = config_['K']
-        model = self.model
+            M = config_['M']
         
         if only_r:
             self._vary_parameter('r', fraction, sampling_freq, init,
@@ -779,6 +828,9 @@ class SomaticLS(object):
         elif only_d:
             self._vary_z_parameter(z_min, z_max, sampling_freq, init,
                                    thr, x_bound, legend, config_, only_d, K, proportions)
+        elif only_g:
+            self._vary_g_parameter( fraction, sampling_freq, init, thr, x_bound,
+                                    legend, config_, K, M, proportions, minimum, maximum)
         else:
             self._variator(fraction, sampling_freq, config_, init, x_bound, legend,
                            thr, z_min, z_max, d_min, d_max, K, proportions)
@@ -960,7 +1012,79 @@ class SomaticLS(object):
         _ = self.lifespan(custom_solution=solutions[-1])
 
         self._plot_variation(solutions, z_range, param_name, threshold, x_bound, legend, K, proportion)
-    
+
+    def _vary_g_parameter(self,
+             fraction: float,
+             sampling_freq: int,
+             initial_conditions: dict,
+             threshold: float,
+             x_bound: float,
+             legend: bool,
+             config: dict,
+             K: float,
+             M: float,
+             proportion: bool,
+             minimum: float,
+             maximum: float) -> None:
+
+        if self.equation == 'one':
+            raise ValueError('No \'g\' parameter in Model 1')
+        else:
+            if (minimum is None) or (maximum is None):
+                space = np.linspace(config['g']/fraction, config['g']*fraction, sampling_freq)
+            else:
+                space = np.linspace(minimum, maximum, sampling_freq)
+
+            solutions = []
+
+            for g in space:
+                conf = config.copy()
+                conf['g'] = g
+
+                solution = solve_ivp(
+                    self.model,
+                    t_span=(self.start, self.end),
+                    y0=list(initial_conditions.values()),
+                    t_eval=self.t,
+                    method=self.method,
+                    args=tuple(conf.values()),
+                    dense_output=False,
+                    atol=1e-6,
+                    rtol=1e-6)
+
+                solutions.append(solution)
+
+            print('Lower bound result:')
+            _ = self.lifespan(custom_solution=solutions[0])
+            print('-' * 40)
+            print('Upper bound result:')
+            _ = self.lifespan(custom_solution=solutions[-1])
+
+            _, ax = plt.subplots(1, 2, figsize=(12, 8))
+
+            if proportion:
+                divisor1, divisor2 = K, M
+                thr1, thr2 = threshold, threshold
+            else:
+                divisor1, divisor2 = 1, 1
+                thr1, thr2 = threshold*config['K'], threshold*config['M']
+
+            for solution, value in zip(solutions, space):
+                ax[0].plot(self.t * self.coeff, solution.y[0] / divisor1,
+                           label=f'Somatic population for g={np.round(value, 6)}')
+                ax[1].plot(self.t * self.coeff, solution.y[1] / divisor2,
+                           label=f'Stem cells population for g={np.round(value, 6)}')
+
+            ax[0].set(xlim=(0, x_bound), xlabel='Years', ylabel='Population')
+            ax[1].set(xlim=(0, x_bound), xlabel='Years', ylabel='Population')
+
+            ax[0].axhline(thr1, c='r', ls='--')
+            ax[1].axhline(thr2, c='r', ls='--')
+
+            if legend:
+                ax[0].legend(loc='upper right')
+                ax[1].legend(loc='upper right')
+
     def _plot_variation(
             self,
             solutions: list,
