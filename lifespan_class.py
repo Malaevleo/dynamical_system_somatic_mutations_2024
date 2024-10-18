@@ -436,18 +436,9 @@ class SomaticLS(object):
         else:
             arr = custom_solution
 
-        l = []
-        k = []
-
-        for i in range(self.span):
-            if arr.y[0][i]/K <= thr:
-                l.append(i)
-                break
-
-        for i in range(self.span):
-            if arr.y[0][i]/K > 0.99:
-                k.append(i)
-                break
+        arr_ = arr.y[0]
+        l = np.where(arr_ <= thr*K)[0]
+        k = np.where(arr_ > 0.99*K)[0]
 
         if len(l) != 0:
             if verbose:
@@ -545,11 +536,13 @@ class SomaticLS(object):
             else:
                 raise NameError('There is no such population in this system')
         
+        plt.figure(figsize = (10,8))
         if proportions:
             if population == 'Somatic':
                 plt.plot(self.t*self.coeff, Y/K, label=population)
             elif population == 'Stem':
                 plt.plot(self.t*self.coeff, Y/M, label=population)
+            plt.axhline(thr, ls='--', color='r', label='Threshold')
         else:
             plt.plot(self.t*self.coeff, Y, label=population)
             if plot_thr and (population == 'Somatic'):
@@ -565,11 +558,8 @@ class SomaticLS(object):
             plt.ylabel('Population')
 
         if not view_all:
-            if isinstance(life, int):
+            if isinstance(life, np.int64):
                 plt.xlim(self.start, life*self.coeff)
-
-        if plot_thr:
-            plt.axhline(thr, ls='--', color='r', label='Threshold')
 
         plt.grid(True)
         plt.legend()
@@ -599,7 +589,7 @@ class SomaticLS(object):
             der = savgol_filter(der, 550, 5)
             max_ = np.max(der)
             max_der_ = np.argmax(der)
-            _, axes = plt.subplots(1, 2, figsize=(12, 8))
+            _, axes = plt.subplots(1, 2, figsize=(12, 8), constrained_layout=True)
 
             axes[0].plot(self.t[:-2]*self.coeff, deriv[:-1])
 
@@ -608,14 +598,14 @@ class SomaticLS(object):
             else:
                 axes[1].semilogy(self.t[:-2]*self.coeff, der)
 
-            axes[1].set_xlabel('Years')
-            axes[1].set_ylabel('dM/dt')
+            axes[1].set_xlabel(r'$t(years)$', fontsize = 20)
+            axes[1].set_ylabel(r'$\frac{\partial \mu(X,t)}{ \partial t}$', fontsize = 24)
 
-            axes[0].set_xlabel('Years')
-            axes[0].set_ylabel('M(t)')
+            axes[0].set_xlabel(r'$t(years)$', fontsize = 20)
+            axes[0].set_ylabel(r'$\mu(X,t)$', fontsize = 20)
 
-            axes[0].set_title('Mortality function')
-            axes[1].set_title('Mortality function derivative')
+            axes[0].set_title('Mortality function', fontsize = 18)
+            axes[1].set_title('Mortality function derivative', fontsize = 18)
 
             axes[0].axvline(maximum*self.coeff, color='r', ls='--')
             axes[1].axvline(max_der_*self.coeff, color='r', ls='--')
@@ -672,7 +662,7 @@ class SomaticLS(object):
             plt.axvline(thr, ls='--', c='g')
             plt.axhline(maximum, ls='--', c='r')
             plt.ylabel('Mortality function')
-            plt.title('M(X)')
+            plt.title(r'$\mu(X,t)$')
             plt.grid(True)
             plt.show()
 
@@ -693,7 +683,7 @@ class SomaticLS(object):
                 thr_ = x[max_mom]
                 banner = 'Population'
 
-            _, ax = plt.subplots(1, 2, figsize=(12, 8))
+            _, ax = plt.subplots(1, 2, figsize=(12, 8), constrained_layout=True)
 
             ax[0].plot(x_, deriv[:-1])
 
@@ -702,14 +692,14 @@ class SomaticLS(object):
             else:
                 ax[1].semilogy(x_, der)
 
-            ax[0].set_title('Mortality function')
-            ax[1].set_title('Mortality function derivative')
+            ax[0].set_title('Mortality function', fontsize = 18)
+            ax[1].set_title('Mortality function derivative', fontsize = 18)
 
-            ax[0].set_xlabel(banner)
-            ax[1].set_xlabel(banner)
+            ax[0].set_xlabel(banner, fontsize = 16)
+            ax[1].set_xlabel(banner, fontsize = 16)
 
-            ax[0].set_ylabel('M(X)')
-            ax[1].set_ylabel('dM(X)')
+            ax[0].set_ylabel(r'$\mu(X,t)$', fontsize = 20)
+            ax[1].set_ylabel(r'$\frac{\partial \mu(X,t)}{ \partial X}$', fontsize = 24)
 
             ax[0].axvline(thr, color='r', ls='--')
             ax[1].axvline(thr_, color='r', ls='--')
