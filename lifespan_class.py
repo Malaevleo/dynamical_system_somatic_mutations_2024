@@ -43,7 +43,7 @@ class SomaticLS(object):
             Output: constructor
         """
 
-        set_eqs = ['one', 'two'] 
+        set_eqs = ['one', 'two', 'combined'] 
 
         self.style = style
         plt.style.use(self.style)
@@ -80,7 +80,7 @@ class SomaticLS(object):
         self.init = self.get_initial_conditions()
         self.threshold = self.get_threshold()
         self.model = self.get_model()
-        self.life = self.lifespan(verbose=False) if isinstance(self.lifespan(verbose=False), int) else None
+        self.life = self.lifespan(verbose=False) if isinstance(self.lifespan(verbose=False), np.int64) else None
 
         if self.equation not in set_eqs:
             raise ValueError('Please use only types (one, two) for equation settings')
@@ -154,7 +154,7 @@ class SomaticLS(object):
         elif item == 'threshold':
             return self.threshold if not self.custom else self.custom_thr
         elif item == 'is dead':
-            return isinstance(self.life, int)
+            return isinstance(self.life, np.int64)
         elif item == 'start time':
             return self.start
         elif item == 'end time':
@@ -324,10 +324,22 @@ class SomaticLS(object):
     def _model_two(self, t, y, s, K, M, r, e, a, b, g, z, d) -> List:
         X, Y, m = y
         m1 = 0.5 * s * (1 - (X + Y) / (K + M))
-        dXdt = (r * X + 2 * e * Y * self._sigmoid(Y / M)) * (1 - X / K) - a * X - m1 * (a * X + b * Y) ** 2 * t ** 2
+        dXdt = (r * X + 2 * e * Y * self._sigmoid(Y / M)) * (1 - X/K) - a * X - m1 * (a * X + b * Y) ** 2 * t ** 2
         dYdt = g * Y * (1 - Y / M) - e * Y * self._sigmoid(Y / M) - b * Y
         dmdt = m1 * (a * X + b * Y) ** 2 * t ** 2
         return [dXdt, dYdt, dmdt]
+    
+    def _model_comb(self, t, y, s, K, M, r, e, a, b, g, z, d) -> List:
+        X, Y, C, F, T, G, m = y
+        m1 = 0.5 * s * (1 - (X + Y) / (K + M))
+        dXdt = (r * X + 2 * e * Y*self._sigmoid(Y/M))* (1 - X / K) - a * X - m1 * (a * X + b * Y + r * C * (1 - C / K) + r * T * (1 - T / M)) ** 2 * t ** 2
+        dYdt = g * Y * (1 - Y / M) - e * Y * self._sigmoid(Y/M) - b * Y
+        dCdt = (r * C + 2 * e * T) * (1 - C / K) + z * a * X - d * C
+        dFdt = (1 - z) * a * X + d * C
+        dTdt = r * T * (1 - T / M) + z * b * Y - d * T - e * T
+        dGdt = (1 - z) * b * Y + d * T
+        dmdt = m1 * (a * X + b * Y + r * C * (1 - C / K) + r * T * (1 - T / M)) ** 2 * t ** 2
+        return [dXdt, dYdt, dCdt, dFdt, dTdt, dGdt, dmdt]
     
     def get_initial_conditions(self) -> Dict:
         K = self.conf_['K']
@@ -360,6 +372,22 @@ class SomaticLS(object):
                     'K': K, 'M': M, 'm': 0
                     }
             }
+        
+        elif self.equation == 'combined':
+            initial = {
+                'liver': {
+                    'K': K, 'M': M, 'C': 0, 'F': 0, 'T':0, 'G':0, 'm': 0
+                    },
+                'lungs': {
+                    'K': K, 'M': M, 'C': 0, 'F': 0, 'T':0, 'G':0, 'm': 0
+                    },
+                'spinal cord': {
+                    'K': K, 'M': M, 'C': 0, 'F': 0, 'T':0, 'G':0, 'm': 0
+                    },
+                'mouse liver': {
+                    'K': K, 'M': M, 'C': 0, 'F': 0, 'T':0, 'G':0, 'm': 0
+                    }
+            }
 
         return initial.get(self.organ, initial['liver'])
     
@@ -368,6 +396,8 @@ class SomaticLS(object):
             return self._model_one
         elif self.equation == 'two':
             return self._model_two
+        elif self.equation == 'combined':
+            return self._model_comb
     
     def calculate_population(self) -> scipy.integrate._ivp.ivp.OdeResult:
         """
@@ -452,7 +482,7 @@ class SomaticLS(object):
             if verbose:
                 print('Haven\'t died')
                 print('-'*50)
-            ls = []
+            ls = None
 
         if verbose:
             if len(k) != 0:
@@ -519,7 +549,7 @@ class SomaticLS(object):
             else:
                 raise NameError('There is no such population in this system')
             
-        elif self.equation == 'two':
+        elif (self.equation == 'two') | (self.equation == 'combined'):
             M = self.conf_['M']
             if population == 'Somatic':
                 Y = arr.y[0]
@@ -568,8 +598,11 @@ class SomaticLS(object):
     def _plot_mortality(self, arr: scipy.integrate._ivp.ivp.OdeResult, life, derivative: bool, logder: bool) -> None:
         if self.equation == 'one':
             Y = arr.y[3]
-        else:
+        elif self.equation == 'two':
             Y = arr.y[2]
+        else:
+            Y = arr.y[-1]
+
         deriv = np.diff(Y)
 
         maximum = np.argmax(deriv)
@@ -638,8 +671,10 @@ class SomaticLS(object):
 
         if self.equation == 'one':
             Y = arr.y[3]
-        else:
+        elif self.equation == 'two':
             Y = arr.y[2]
+        else:
+            Y = arr.y[-1]
         
         deriv = np.diff(Y)
         x = arr.y[0]
