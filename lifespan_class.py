@@ -496,6 +496,18 @@ class SomaticLS(object):
         
         return ls
     
+    @property
+    def calc_entropy_prod(self):
+        if (self.equation != 'one') and (self.include != False): 
+            raise ValueError('Only for Model 1 without dividing mutants.')
+        else:
+            X = self.calculate_population().y[0]
+            X_dot = np.diff(X)
+            sigma, K, _, r, _, _, alpha, _, _, _ = self.set_config().values()
+            first = X_dot*(r*(1 - X[:-1]/K) - alpha*X[:-1] - sigma*X[:-1]*(alpha*self.t[:-1])**2 + (1.5/K)*sigma*(alpha*X[:-1]*self.t[:-1])**2)
+            second = alpha*X[:-1]*(sigma*alpha*X[:-1]*self.t[:-1]*(1 - X[:-1]/K))
+            return X_dot*(first - second)
+    
     def plot_curves(
             self,
             population: str = 'Somatic',
@@ -504,7 +516,8 @@ class SomaticLS(object):
             plot_thr: bool = True,
             root: int = 1,
             derivative: bool = False,
-            logder: bool = False) -> None:
+            logder: bool = False,
+            lim: List|Tuple = (0, 300)) -> None:
         """
             Plot results of a simulation.
 
@@ -546,6 +559,23 @@ class SomaticLS(object):
             elif population == 'Stable points':
                 self._plot_stable_points(root, proportions, plot_thr)
                 return None
+            elif population == 'Entropy production':
+                dS = self.calc_entropy_prod
+                if logder == False:
+                    D = -dS
+                    title = r'$ \dot S(t)$'
+                else:
+                    D = np.log10(-dS)
+                    title = r'$\log_{10} \dot S(t)$'
+                plt.plot(self.t[:-1]*self.coeff, D, c = 'r')
+                plt.title('Entropy production over time')
+                plt.grid('True')
+                plt.ylabel(title)
+                plt.xlabel(r'$t$')
+                plt.xlim(lim[0], lim[1])
+                plt.show()
+                return None
+
             else:
                 raise NameError('There is no such population in this system')
             
