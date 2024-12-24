@@ -48,7 +48,7 @@ class SomaticLS(object):
         self.style = style
         plt.style.use(self.style)
 
-        organs = ['liver', 'mouse liver', 'lungs', 'spinal cord']
+        organs = ['liver', 'mouse liver', 'lungs', 'spinal cord', 'cirrhosis']
         self.method = method
         self.organ = organ
         self.custom = False
@@ -251,21 +251,25 @@ class SomaticLS(object):
     def set_config(self) -> Dict:
         configs = {
             'liver': {
-                'sigma': 0.087, 'K': 2e11, 'M': 2e11/94000, 'r': 4/407, 'eps': 0.064,
+                'sigma': 0.117, 'K': 2e11, 'M': 2e11/94000, 'r': 4/407, 'eps': 0.064,
                 'alpha': 3.5e-9*9.6e-3, 'beta': 1.83e-9*9.6e-3, 'g': 4/407, 'z': 0.9, 'theta': 0.239
                 },
             'mouse liver': {
-                'sigma': 0.087, 'K': 3.37e8, 'M': 3.37e8/94000, 'r': 63/407, 'eps': 0.064,
+                'sigma': 0.117, 'K': 3.37e8, 'M': 3.37e8/94000, 'r': 63/407, 'eps': 0.064,
                 'alpha': 35*3.5e-9, 'beta': 35*1.83e-9, 'g': 63/407, 'z': 0.9, 'theta': 0.239
                 },
             'lungs': {
-                'sigma': 0.073, 'K': 10.5e9, 'M': 0.07*10.5e9, 'r': 0.001/407, 'eps': 0.007,
+                'sigma': 0.117, 'K': 10.5e9, 'M': 0.07*10.5e9, 'r': 0.001/407, 'eps': 0.007,
                 'alpha': 6.392476819356688e-12, 'beta': 6.392476819356688e-12 / 1.9126, 'g': 0.001/407,
                 'z': 0.9, 'theta': 0.239
                 },
             'spinal cord': {
-                'sigma': 0.085, 'K': 222e6, 'M': 0, 'r': 0, 'eps': 0,
+                'sigma': 0.117, 'K': 222e6, 'M': 0, 'r': 0, 'eps': 0,
                 'alpha': 0.9047619*3.5e-9*0.0013563, 'beta': 0, 'g': 0, 'z': 0.9, 'theta': 0.239
+                },
+            'cirrhosis': {
+                'sigma': 0.117, 'K': 2e11, 'M': 2e11/94000, 'r': 4/407, 'eps': 0.064,
+                'alpha': 1.5*3.5e-9*9.6e-3, 'beta': 1.5*1.83e-9*9.6e-3, 'g': 4/407, 'z': 0.9, 'theta': 0.239
                 }
         }
         return configs.get(self.organ, configs['liver'])
@@ -358,6 +362,9 @@ class SomaticLS(object):
                     },
                 'mouse liver': {
                     'K': K, 'C': 0, 'F': 0, 'm': 0
+                    },
+                'cirrhosis': {
+                    'K': K, 'C': 0, 'F': 0, 'm': 0
                     }
             }
         elif self.equation == 'two':
@@ -370,6 +377,9 @@ class SomaticLS(object):
                     },
                 'mouse liver': {
                     'K': K, 'M': M, 'm': 0
+                    },
+                'cirrhosis': {
+                    'K': K, 'M': 0, 'm': 0
                     }
             }
         
@@ -385,6 +395,9 @@ class SomaticLS(object):
                     'K': K, 'M': M, 'C': 0, 'F': 0, 'T':0, 'G':0, 'm': 0
                     },
                 'mouse liver': {
+                    'K': K, 'M': M, 'C': 0, 'F': 0, 'T':0, 'G':0, 'm': 0
+                    },
+                'cirrhosis': {
                     'K': K, 'M': M, 'C': 0, 'F': 0, 'T':0, 'G':0, 'm': 0
                     }
             }
@@ -507,6 +520,8 @@ class SomaticLS(object):
             first = X_dot*(r*(1 - X[:-1]/K) - alpha*X[:-1] - sigma*X[:-1]*(alpha*self.t[:-1])**2 + (1.5/K)*sigma*(alpha*X[:-1]*self.t[:-1])**2)
             second = alpha*X[:-1]*(sigma*alpha*X[:-1]*self.t[:-1]*(1 - X[:-1]/K))
             return X_dot*(first - second)
+
+
     
     def plot_curves(
             self,
@@ -542,6 +557,29 @@ class SomaticLS(object):
         if self.equation == 'one':
             if population == 'Somatic':
                 Y = arr.y[0]
+            elif population == 'Cirrhosis comparison':
+              if (self.organ != 'liver'):
+                raise ValueError('Comparison is applicable only for the healthy human liver.')
+              else: 
+                if not self.custom:
+                    original_conf = self.conf_.copy()
+                else:
+                    original_conf = self.custom_conf.copy()
+                arr_default = self.calculate_population()
+                Y = arr_default.y[0]
+                if not self.custom:
+                    self.conf_['alpha'] *= 1.5
+                    self.conf_['beta']  *= 1.5
+                else:
+                    self.custom_conf['alpha'] *= 1.5
+                    self.custom_conf['beta']  *= 1.5
+                arr_cirr = self.calculate_population()
+                Y_cirr = arr_cirr.y[0]
+                if not self.custom:
+                    self.conf_ = original_conf
+                else:
+                    self.custom_conf = original_conf
+
             elif population == 'Alive mutants':
                 Y = arr.y[1]
                 proportions = False
@@ -585,6 +623,29 @@ class SomaticLS(object):
                 Y = arr.y[0]
             elif population == 'Stem':
                 Y = arr.y[1]
+            elif population == 'Cirrhosis comparison':
+              if (self.organ != 'liver'):
+                raise ValueError('Comparison is applicable only for the healthy human liver.')
+              else: 
+                if not self.custom:
+                    original_conf = self.conf_.copy()
+                else:
+                    original_conf = self.custom_conf.copy()
+                arr_default = self.calculate_population()
+                Y = arr_default.y[0]
+                if not self.custom:
+                    self.conf_['alpha'] *= 1.5
+                    self.conf_['beta']  *= 1.5
+                else:
+                    self.custom_conf['alpha'] *= 1.5
+                    self.custom_conf['beta']  *= 1.5
+                arr_cirr = self.calculate_population()
+                Y_cirr = arr_cirr.y[0]
+                if not self.custom:
+                    self.conf_ = original_conf
+                else:
+                    self.custom_conf = original_conf
+
             elif population == 'Mortality function':
                 self._plot_mortality(arr, life, derivative, logder)
                 return None
@@ -602,6 +663,9 @@ class SomaticLS(object):
                 plt.plot(self.t*self.coeff, Y/K, label=population)
             elif population == 'Stem':
                 plt.plot(self.t*self.coeff, Y/M, label=population)
+            elif population == 'Cirrhosis comparison':
+                plt.plot(self.t*self.coeff, Y/K, label='Healthy liver')
+                plt.plot(self.t * self.coeff, Y_cirr / K, label=population)
             plt.axhline(thr, ls='--', color='r', label='Threshold')
         else:
             plt.plot(self.t*self.coeff, Y, label=population)
@@ -609,6 +673,8 @@ class SomaticLS(object):
                 plt.axhline(thr*K, ls='--', color='r', label='Threshold')
             elif plot_thr and (population == 'Stem'):
                 plt.axhline(thr*M, ls='--', color='r', label='Threshold')
+            elif plot_thr and (population == 'Cirrhosis comparison'):
+                plt.axhline(thr*K, ls='--', color='r', label='Threshold')
 
         plt.xlabel('Years')
 
