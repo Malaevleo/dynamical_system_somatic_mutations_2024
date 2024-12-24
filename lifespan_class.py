@@ -665,7 +665,7 @@ class SomaticLS(object):
                 plt.plot(self.t*self.coeff, Y/M, label=population)
             elif population == 'Cirrhosis comparison':
                 plt.plot(self.t*self.coeff, Y/K, label='Healthy liver')
-                plt.plot(self.t * self.coeff, Y_cirr / K, label=population)
+                plt.plot(self.t * self.coeff, Y_cirr / K, label='Cirrhosis')
             plt.axhline(thr, ls='--', color='r', label='Threshold')
         else:
             plt.plot(self.t*self.coeff, Y, label=population)
