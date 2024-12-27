@@ -39,8 +39,6 @@ class SomaticLS(object):
                   start and end times in years, include alive mutants in Model 1 system or not,
                   type of system, whether to print config, custom_conf - specify your custom parameters for a system.
 
-            ######
-            Output: constructor
         """
 
         set_eqs = ['one', 'two', 'combined'] 
@@ -48,7 +46,7 @@ class SomaticLS(object):
         self.style = style
         plt.style.use(self.style)
 
-        organs = ['liver', 'mouse liver', 'lungs', 'spinal cord', 'cirrhosis']
+        organs = ['liver', 'mouse liver', 'lungs', 'spinal cord']
         self.method = method
         self.organ = organ
         self.custom = False
@@ -143,24 +141,25 @@ class SomaticLS(object):
         return self._print_config()
 
     def __getitem__(self, item):
-        if item == 'parameters':
-            return self.conf_ if not self.custom else self.custom_conf
-        elif item == 'lifespan':
-            return {'Mitosis': self.life, 'Years': int(self.life * self.coeff)} if self.life is not None else None
-        elif item == 'population':
-            return self.calculate_population()
-        elif item == 'initial':
-            return self.init if not self.custom else self.custom_init
-        elif item == 'threshold':
-            return self.threshold if not self.custom else self.custom_thr
-        elif item == 'is dead':
-            return isinstance(self.life, np.int64)
-        elif item == 'start time':
-            return self.start
-        elif item == 'end time':
-            return self.end
-        else:
-            raise NameError('Cannot access this attribute')
+        match item:
+            case 'parameters':
+                return self.conf_ if not self.custom else self.custom_conf
+            case 'lifespan':
+                return {'Mitosis': self.life, 'Years': int(self.life * self.coeff)} if self.life is not None else None
+            case 'population':
+                return self.calculate_population()
+            case 'initial':
+                return self.init if not self.custom else self.custom_init
+            case 'threshold':
+                return self.threshold if not self.custom else self.custom_thr
+            case 'is dead':
+                return isinstance(self.life, np.int64)
+            case 'start time':
+                return self.start
+            case 'end time':
+                return self.end
+            case _:
+                raise NameError('Cannot access this attribute')
 
     def _print_config(self) -> str:
         return f'''
@@ -255,7 +254,7 @@ class SomaticLS(object):
                 'alpha': 3.5e-9*9.6e-3, 'beta': 1.83e-9*9.6e-3, 'g': 4/407, 'z': 0.9, 'theta': 0.239
                 },
             'mouse liver': {
-                'sigma': 0.117, 'K': 3.37e8, 'M': 3.37e8/94000, 'r': 63/407, 'eps': 0.064,
+                'sigma': 0.0777, 'K': 3.37e8, 'M': 3.37e8/94000, 'r': 63/407, 'eps': 0.064,
                 'alpha': 35*3.5e-9, 'beta': 35*1.83e-9, 'g': 63/407, 'z': 0.9, 'theta': 0.239
                 },
             'lungs': {
@@ -266,10 +265,6 @@ class SomaticLS(object):
             'spinal cord': {
                 'sigma': 0.117, 'K': 222e6, 'M': 0, 'r': 0, 'eps': 0,
                 'alpha': 0.9047619*3.5e-9*0.0013563, 'beta': 0, 'g': 0, 'z': 0.9, 'theta': 0.239
-                },
-            'cirrhosis': {
-                'sigma': 0.117, 'K': 2e11, 'M': 2e11/94000, 'r': 4/407, 'eps': 0.064,
-                'alpha': 1.5*3.5e-9*9.6e-3, 'beta': 1.5*1.83e-9*9.6e-3, 'g': 4/407, 'z': 0.9, 'theta': 0.239
                 }
         }
         return configs.get(self.organ, configs['liver'])
@@ -287,7 +282,7 @@ class SomaticLS(object):
               memory - whether to change given attributes without restarting the constructor
 
         ######
-        Output: new exemplar
+        Output: new exemplair
         """
 
         if not memory:
@@ -362,9 +357,6 @@ class SomaticLS(object):
                     },
                 'mouse liver': {
                     'K': K, 'C': 0, 'F': 0, 'm': 0
-                    },
-                'cirrhosis': {
-                    'K': K, 'C': 0, 'F': 0, 'm': 0
                     }
             }
         elif self.equation == 'two':
@@ -377,9 +369,6 @@ class SomaticLS(object):
                     },
                 'mouse liver': {
                     'K': K, 'M': M, 'm': 0
-                    },
-                'cirrhosis': {
-                    'K': K, 'M': 0, 'm': 0
                     }
             }
         
@@ -395,9 +384,6 @@ class SomaticLS(object):
                     'K': K, 'M': M, 'C': 0, 'F': 0, 'T':0, 'G':0, 'm': 0
                     },
                 'mouse liver': {
-                    'K': K, 'M': M, 'C': 0, 'F': 0, 'T':0, 'G':0, 'm': 0
-                    },
-                'cirrhosis': {
                     'K': K, 'M': M, 'C': 0, 'F': 0, 'T':0, 'G':0, 'm': 0
                     }
             }
@@ -520,8 +506,6 @@ class SomaticLS(object):
             first = X_dot*(r*(1 - X[:-1]/K) - alpha*X[:-1] - sigma*X[:-1]*(alpha*self.t[:-1])**2 + (1.5/K)*sigma*(alpha*X[:-1]*self.t[:-1])**2)
             second = alpha*X[:-1]*(sigma*alpha*X[:-1]*self.t[:-1]*(1 - X[:-1]/K))
             return X_dot*(first - second)
-
-
     
     def plot_curves(
             self,
@@ -532,7 +516,7 @@ class SomaticLS(object):
             root: int = 1,
             derivative: bool = False,
             logder: bool = False,
-            lim: List|Tuple = (0, 300)) -> None:
+            lim: List | Tuple = (0, 300)) -> None:
         """
             Plot results of a simulation.
 
@@ -557,29 +541,6 @@ class SomaticLS(object):
         if self.equation == 'one':
             if population == 'Somatic':
                 Y = arr.y[0]
-            elif population == 'Cirrhosis comparison':
-              if (self.organ != 'liver'):
-                raise ValueError('Comparison is applicable only for the healthy human liver.')
-              else: 
-                if not self.custom:
-                    original_conf = self.conf_.copy()
-                else:
-                    original_conf = self.custom_conf.copy()
-                arr_default = self.calculate_population()
-                Y = arr_default.y[0]
-                if not self.custom:
-                    self.conf_['alpha'] *= 1.5
-                    self.conf_['beta']  *= 1.5
-                else:
-                    self.custom_conf['alpha'] *= 1.5
-                    self.custom_conf['beta']  *= 1.5
-                arr_cirr = self.calculate_population()
-                Y_cirr = arr_cirr.y[0]
-                if not self.custom:
-                    self.conf_ = original_conf
-                else:
-                    self.custom_conf = original_conf
-
             elif population == 'Alive mutants':
                 Y = arr.y[1]
                 proportions = False
@@ -605,10 +566,15 @@ class SomaticLS(object):
                 else:
                     D = np.log10(-dS)
                     title = r'$\log_{10} \dot S(t)$'
+                max_prod = np.max(D)
+                max_mom = np.argmax(D)
+                print(f'Time of maximum production: {np.round(max_mom*self.coeff)} years')
                 plt.plot(self.t[:-1]*self.coeff, D, c = 'r')
                 plt.title('Entropy production over time')
                 plt.grid('True')
                 plt.ylabel(title)
+                plt.axvline(max_mom*self.coeff, ls = '--')
+                plt.axhline(max_prod, ls = '--', c = 'g')
                 plt.xlabel(r'$t$')
                 plt.xlim(lim[0], lim[1])
                 plt.show()
@@ -623,29 +589,6 @@ class SomaticLS(object):
                 Y = arr.y[0]
             elif population == 'Stem':
                 Y = arr.y[1]
-            elif population == 'Cirrhosis comparison':
-              if (self.organ != 'liver'):
-                raise ValueError('Comparison is applicable only for the healthy human liver.')
-              else: 
-                if not self.custom:
-                    original_conf = self.conf_.copy()
-                else:
-                    original_conf = self.custom_conf.copy()
-                arr_default = self.calculate_population()
-                Y = arr_default.y[0]
-                if not self.custom:
-                    self.conf_['alpha'] *= 1.5
-                    self.conf_['beta']  *= 1.5
-                else:
-                    self.custom_conf['alpha'] *= 1.5
-                    self.custom_conf['beta']  *= 1.5
-                arr_cirr = self.calculate_population()
-                Y_cirr = arr_cirr.y[0]
-                if not self.custom:
-                    self.conf_ = original_conf
-                else:
-                    self.custom_conf = original_conf
-
             elif population == 'Mortality function':
                 self._plot_mortality(arr, life, derivative, logder)
                 return None
@@ -663,9 +606,6 @@ class SomaticLS(object):
                 plt.plot(self.t*self.coeff, Y/K, label=population)
             elif population == 'Stem':
                 plt.plot(self.t*self.coeff, Y/M, label=population)
-            elif population == 'Cirrhosis comparison':
-                plt.plot(self.t*self.coeff, Y/K, label='Healthy liver')
-                plt.plot(self.t * self.coeff, Y_cirr / K, label='Cirrhosis')
             plt.axhline(thr, ls='--', color='r', label='Threshold')
         else:
             plt.plot(self.t*self.coeff, Y, label=population)
@@ -673,8 +613,6 @@ class SomaticLS(object):
                 plt.axhline(thr*K, ls='--', color='r', label='Threshold')
             elif plot_thr and (population == 'Stem'):
                 plt.axhline(thr*M, ls='--', color='r', label='Threshold')
-            elif plot_thr and (population == 'Cirrhosis comparison'):
-                plt.axhline(thr*K, ls='--', color='r', label='Threshold')
 
         plt.xlabel('Years')
 
@@ -707,8 +645,8 @@ class SomaticLS(object):
         if not derivative:
             plt.plot(self.t[:-1]*self.coeff, deriv)
             plt.xlabel('Years')
-            plt.ylabel('M(t)')
-            plt.title('Mortality function')
+            plt.ylabel(r'\mu')
+            #plt.title('Mortality function')
             plt.axvline(maximum * self.coeff, color='r', ls='--')
             plt.axhline(max_der, ls='-.', color='g')
             plt.grid(True)
@@ -728,10 +666,10 @@ class SomaticLS(object):
                 axes[1].semilogy(self.t[:-2]*self.coeff, der)
 
             axes[1].set_xlabel(r'$t(years)$', fontsize = 20)
-            axes[1].set_ylabel(r'$\frac{\partial \mu(X,t)}{ \partial t}$', fontsize = 24)
+            axes[1].set_ylabel(r'$\frac{\partial \mu}{ \partial t}$', fontsize = 24)
 
             axes[0].set_xlabel(r'$t(years)$', fontsize = 20)
-            axes[0].set_ylabel(r'$\mu(X,t)$', fontsize = 20)
+            axes[0].set_ylabel(r'$\mu$', fontsize = 20)
 
             axes[0].set_title('Mortality function', fontsize = 18)
             axes[1].set_title('Mortality function derivative', fontsize = 18)
@@ -745,7 +683,7 @@ class SomaticLS(object):
             print('Max derivative value:', np.round(max_, 0))
             print('Max derivative moment:', np.round(max_der_*self.coeff, 0))
 
-            if isinstance(life, int):
+            if isinstance(life, np.int64):
                 print(
                     'Ratio of max derivative to total lifespan in %:',
                     np.round((max_der_ * self.coeff * 100)/(life * self.coeff), 1)
@@ -754,7 +692,7 @@ class SomaticLS(object):
         print('Max value:', np.round(max_der, 0))
         print('Max moment:', np.round(maximum * self.coeff, 0))
 
-        if isinstance(life, int):
+        if isinstance(life, np.int64):
             print('Ratio of max to total lifespan in %:', np.round((maximum * self.coeff * 100)/(life * self.coeff), 1))
 
     def _plot_mortality_phase(
@@ -782,7 +720,7 @@ class SomaticLS(object):
             if proportions:
                 x_ = x[:-1]/K
                 thr = x[max_]/K
-                banner = 'Population/K'
+                banner = 'Population/Capacity'
             else:
                 x_ = x[:-1]
                 thr = x[max_]
@@ -792,8 +730,8 @@ class SomaticLS(object):
             plt.xlabel(banner)
             plt.axvline(thr, ls='--', c='g')
             plt.axhline(maximum, ls='--', c='r')
-            plt.ylabel('Mortality function')
-            plt.title(r'$\mu(X,t)$')
+            #plt.ylabel('Mortality function')
+            plt.title(r'$\mu$')
             plt.grid(True)
             plt.show()
 
@@ -807,7 +745,7 @@ class SomaticLS(object):
                 x_ = x[:-2]/K
                 thr = x[max_]/K
                 thr_ = x[max_mom]/K
-                banner = 'Population/K'
+                banner = 'Population/Capacity'
             else:
                 x_ = x[:-2]
                 thr = x[max_]
@@ -829,8 +767,8 @@ class SomaticLS(object):
             ax[0].set_xlabel(banner, fontsize = 16)
             ax[1].set_xlabel(banner, fontsize = 16)
 
-            ax[0].set_ylabel(r'$\mu(X,t)$', fontsize = 20)
-            ax[1].set_ylabel(r'$\frac{\partial \mu(X,t)}{ \partial X}$', fontsize = 24)
+            ax[0].set_ylabel(r'$\mu$', fontsize = 20)
+            ax[1].set_ylabel(r'$\frac{\partial \mu}{ \partial X}$', fontsize = 24)
 
             ax[0].axvline(thr, color='r', ls='--')
             ax[1].axvline(thr_, color='r', ls='--')
@@ -873,7 +811,7 @@ class SomaticLS(object):
         if proportions:
             res = res/K
             res_ = self.calculate_population().y[0]/K
-            label = 'Population/K'
+            label = 'Population/Capacity'
         else:
             thr = thr*K
             label = 'Population'
@@ -906,7 +844,8 @@ class SomaticLS(object):
             legend: bool = True,
             proportions: bool = True,
             minimum: float = None,
-            maximum: float = None) -> None:
+            maximum: float = None,
+            return_ls: bool = False) -> None:
         """
             Perturb the parameters of a system to see the results.
 
@@ -936,25 +875,30 @@ class SomaticLS(object):
         
         if only_r:
             self._vary_parameter('r', fraction, sampling_freq, init,
-                                 thr, x_bound, legend, config_, K, proportions, minimum, maximum)
+                                 thr, x_bound, legend, config_, K, proportions, minimum, maximum,
+                                 return_ls)
         elif only_alpha:
-            self._vary_parameter('alpha', fraction, sampling_freq, init,
-                                 thr, x_bound, legend, config_, K, proportions, minimum, maximum)
+            d = self._vary_parameter('alpha', fraction, sampling_freq, init,
+                                 thr, x_bound, legend, config_, K, proportions, minimum, maximum,
+                                 return_ls)
         elif only_sigma:
-            self._vary_parameter('sigma', fraction, sampling_freq, init,
-                                 thr, x_bound, legend, config_, K, proportions, minimum, maximum)
+            d = self._vary_parameter('sigma', fraction, sampling_freq, init,
+                                 thr, x_bound, legend, config_, K, proportions, minimum, maximum,
+                                 return_ls)
         elif only_z:
-            self._vary_z_parameter(z_min, z_max, sampling_freq, init,
+            d = self._vary_z_parameter(z_min, z_max, sampling_freq, init,
                                    thr, x_bound, legend, config_, only_d, K, proportions)
         elif only_d:
-            self._vary_z_parameter(z_min, z_max, sampling_freq, init,
+            d = self._vary_z_parameter(z_min, z_max, sampling_freq, init,
                                    thr, x_bound, legend, config_, only_d, K, proportions)
         elif only_g:
-            self._vary_g_parameter( fraction, sampling_freq, init, thr, x_bound,
+            d = self._vary_g_parameter( fraction, sampling_freq, init, thr, x_bound,
                                     legend, config_, K, M, proportions, minimum, maximum)
         else:
             self._variator(fraction, sampling_freq, config_, init, x_bound, legend,
                            thr, z_min, z_max, d_min, d_max, K, proportions)
+        if return_ls:
+            return d
 
     def _variator(
             self, 
@@ -1051,7 +995,8 @@ class SomaticLS(object):
             K: float,
             proportion: bool,
             minimum: float,
-            maximum: float) -> None:
+            maximum: float,
+            return_ls: bool = False) -> None:
         
         if (minimum is not None) & (maximum is not None):
             param_range = np.linspace(minimum, maximum, sampling_freq)
@@ -1083,6 +1028,13 @@ class SomaticLS(object):
         _ = self.lifespan(custom_solution=solutions[-1])
 
         self._plot_variation(solutions, param_range, param_name, threshold, x_bound, legend, K, proportion)
+
+        if return_ls:
+            d = {}
+            for i in range(len(solutions)):
+                if self.lifespan(custom_solution=solutions[i]) != None:
+                    d[f'{(param_range[i]/0.117)*100}'] = self.lifespan(custom_solution=solutions[i], verbose=False)*self.coeff
+            return d
     
     def _vary_z_parameter(
             self, 
@@ -1096,7 +1048,8 @@ class SomaticLS(object):
             config: dict,
             only_d: bool,
             K: float,
-            proportion: bool) -> None:
+            proportion: bool,
+            return_ls: bool = False) -> None:
         
         if self.equation == 'two':
             raise ValueError('No alive mutants in two equation model. Consider using Model 1 equation.')
@@ -1133,6 +1086,11 @@ class SomaticLS(object):
         _ = self.lifespan(custom_solution=solutions[-1])
 
         self._plot_variation(solutions, z_range, param_name, threshold, x_bound, legend, K, proportion)
+        if return_ls:
+            d = {}
+            for i in range(len(solutions)):
+                d[f'{z_range[i]}'] = solutions[i]
+            return d
 
     def _vary_g_parameter(self,
              fraction: float,
@@ -1247,3 +1205,68 @@ class SomaticLS(object):
         if legend:
             ax.legend(loc='upper right')
         plt.show()
+
+def plot_organs(lim: List | Tuple = (0, 300), equation: str = 'one', include_mutants: bool = False) -> None:
+
+    org1 = SomaticLS(organ='liver', start_time=lim[0], end_time=lim[1], 
+                     equation=equation, include_mutants=include_mutants)
+    
+    org2 = SomaticLS(organ='lungs', start_time=lim[0], end_time=lim[1], 
+                     equation=equation, include_mutants=include_mutants)
+    
+    pop1 = org1.calculate_population().y[0]
+    pop2 = org2.calculate_population().y[0]
+
+    thr1 = org1['threshold']
+    thr2 = org2['threshold']
+
+    K1 = org1['parameters']['K']
+    K2 = org2['parameters']['K']
+
+    ls1 = org1['lifespan']
+    ls2 = org2['lifespan']
+
+    print(f'Lifespans: liver - {ls1}, lungs - {ls2}')
+
+    plt.plot(org1.t*org1.coeff, pop1/K1, label = 'Liver')
+    plt.plot(org1.t*org1.coeff, pop2/K2, label = 'Lungs')
+    plt.xlabel(r'$t(years)$')
+    plt.ylabel('Population/Capacity')
+    plt.grid('True')
+    plt.axhline(thr1, ls = '--', c = 'r')
+    plt.axhline(thr2, ls = '--', c = 'g')
+    plt.legend()
+    plt.show()
+
+def plot_models(lim: List | Tuple = (0, 300), organ: str = 'liver'):
+    org1 = SomaticLS(organ=organ, start_time=lim[0], end_time=lim[1], equation='two')
+    org2 = SomaticLS(organ=organ, start_time=lim[0], end_time=lim[1], equation='one', include_mutants=True)
+    org3 = SomaticLS(organ=organ, start_time=lim[0], end_time=lim[1], equation='one')
+    org4 = SomaticLS(organ=organ, start_time=lim[0], end_time=lim[1], equation='combined', include_mutants=True)
+
+    arr = np.zeros([4, org1.t.shape[0]])
+
+    arr_models = np.array([org1, org2, org3, org4])
+
+    arr_ls = np.zeros(4)
+
+    K = org1['parameters']['K']
+
+    thr = org1['threshold']
+
+    plt.figure(figsize=(12,8))
+
+    for i in range(4):
+        arr[i] = arr_models[i].calculate_population().y[0]
+        arr_ls[i] = arr_models[i]['lifespan']['Years']
+
+        plt.plot(org1.t*org1.coeff, arr[i]/K, label = f'Model:{arr_models[i].equation}, mutants:{arr_models[i].include}, ls: {arr_ls[i]}')
+    
+    plt.xlabel(r'$t(years)$')
+    plt.ylabel('Population/Capacity')
+    plt.grid('True')
+    plt.axhline(thr, ls = '--', c = 'r')
+    plt.legend()
+    plt.show()
+    
+
