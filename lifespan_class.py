@@ -541,6 +541,33 @@ class SomaticLS(object):
         if self.equation == 'one':
             if population == 'Somatic':
                 Y = arr.y[0]
+            elif population == 'Cirrhosis comparison':
+              if (self.organ != 'liver'):
+                raise ValueError('Comparison is applicable only for the healthy human liver.')
+              else: 
+                if not self.custom:
+                    original_conf = self.conf_.copy()
+                else:
+                    original_conf = self.custom_conf.copy()
+                arr_default = self.calculate_population()
+
+                Y = arr_default.y[0]
+
+                if not self.custom:
+                    self.conf_['alpha'] *= 1.5
+                    self.conf_['beta']  *= 1.5
+                else:
+                    self.custom_conf['alpha'] *= 1.5
+                    self.custom_conf['beta']  *= 1.5
+
+                arr_cirr = self.calculate_population()
+
+                Y_cirr = arr_cirr.y[0]
+
+                if not self.custom:
+                    self.conf_ = original_conf
+                else:
+                    self.custom_conf = original_conf
             elif population == 'Alive mutants':
                 Y = arr.y[1]
                 proportions = False
@@ -587,6 +614,30 @@ class SomaticLS(object):
             M = self.conf_['M']
             if population == 'Somatic':
                 Y = arr.y[0]
+                
+            elif population == 'Cirrhosis comparison':
+              if (self.organ != 'liver'):
+                raise ValueError('Comparison is applicable only for the healthy human liver.')
+              else: 
+                if not self.custom:
+                    original_conf = self.conf_.copy()
+                else:
+                    original_conf = self.custom_conf.copy()
+                arr_default = self.calculate_population()
+                Y = arr_default.y[0]
+                if not self.custom:
+                    self.conf_['alpha'] *= 1.5
+                    self.conf_['beta']  *= 1.5
+                else:
+                    self.custom_conf['alpha'] *= 1.5
+                    self.custom_conf['beta']  *= 1.5
+                arr_cirr = self.calculate_population()
+                Y_cirr = arr_cirr.y[0]
+                if not self.custom:
+                    self.conf_ = original_conf
+                else:
+                    self.custom_conf = original_conf
+
             elif population == 'Stem':
                 Y = arr.y[1]
             elif population == 'Mortality function':
